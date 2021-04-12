@@ -38,8 +38,9 @@ class MyRLEnv(TextRLEnv):
 ```
 
 ### prepare for training
+* observation_input should be a list of all possible input string for model training
 ```python
-env = MyRLEnv(model, tokenizer, observation_input=["床前明月光"])
+env = MyRLEnv(model, tokenizer, observation_input=observaton_list)
 actor = TextRLActor(env,model,tokenizer)
 agent = actor.agent_ppo(update_interval=10, minibatch_size=2000, epochs=20)
 ```
