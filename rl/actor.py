@@ -58,4 +58,4 @@ class TextRLActor:
                 reset = t >= max_episode_len
                 self.agent.observe(obs, reward, done, reset)
                 if done or reset:
-                    return pred
+                    return pred.get('predicted_str')

@@ -25,7 +25,7 @@ class TextRLEnv(gym.Env):
         predicted, done, predicted_str = self._predict(vocab_id=action)
         reward = self.get_reward(predicted, done)
         self.predicted = predicted
-        return self._get_obs(predicted), reward, done, predicted_str
+        return self._get_obs(predicted), reward, done, {"predicted_str": predicted_str}
 
     def get_reward(self, predicted, finish):
         reward = 1
