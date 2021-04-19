@@ -29,8 +29,8 @@ model.eval()
 * finish(bool): it met the end of sentence or not
 ```python
 class MyRLEnv(TextRLEnv):
-    def get_reward(self, predicted, finish): # predicted will be the list of predicted token
-        if "[UNK]" in predicted:
+    def get_reward(self, input_text, predicted_list, finish): # predicted will be the list of predicted token
+        if "[UNK]" in predicted_list:
             reward = -1
         else:
             reward = 1

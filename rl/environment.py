@@ -22,12 +22,12 @@ class TextRLEnv(gym.Env):
     def step(self, action):
         if isinstance(action, numpy.ndarray):
             action = numpy.argmax(action)
-        predicted, done, predicted_str = self._predict(vocab_id=action)
-        reward = self.get_reward(predicted, done)
+        predicted, finish, predicted_str = self._predict(vocab_id=action)
+        reward = self.get_reward(self.input_text, predicted, finish)
         self.predicted = predicted
-        return self._get_obs(predicted), reward, done, {"predicted_str": predicted_str}
+        return self._get_obs(predicted), reward, finish, {"predicted_str": predicted_str}
 
-    def get_reward(self, predicted, finish):
+    def get_reward(self, input_text, predicted_list, finish):
         reward = 1
         return reward
 
