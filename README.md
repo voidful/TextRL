@@ -8,6 +8,12 @@ This project is trying to use reinforcement learning to adjust text generation r
 It is based on any text-generation model on huggingaface's [transformer](https://github.com/huggingface/transformers) with [PFRL](https://github.com/pfnet/pfrl) and [OpenAI GYM](https://gym.openai.com).
 
 ## Installation
+### pip install
+```bash
+pip install textrl
+```
+
+### Build from source
 git clone and cd into this project.
 ```bash
 pip install -r requirement.txt
@@ -16,8 +22,7 @@ pip install -r requirement.txt
 ## Usage
 ### init agent and environment
 ```python
-from rl.environment import TextRLEnv
-from rl.actor import TextRLActor
+from textrl import TextRLEnv,TextRLActor
 
 from transformers import AutoTokenizer, AutoModelWithLMHead  
 tokenizer = AutoTokenizer.from_pretrained("any models")  

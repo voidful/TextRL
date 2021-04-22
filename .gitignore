@@ -249,3 +249,8 @@ dmypy.json
 cython_debug/
 
 /gpt-ptt/
+
+# how2
+.how2
+how2
+/how2
