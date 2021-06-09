@@ -16,7 +16,7 @@ pip install textrl
 ### Build from source
 git clone and cd into this project.
 ```bash
-pip install .
+pip install -e .
 ```
 
 ## Usage
