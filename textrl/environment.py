@@ -32,6 +32,7 @@ class TextRLEnv(gym.Env):
         return reward
 
     def reset(self, input_text=None):
+        self.predicted = []
         if input_text is None:
             self.input_text = random.choice(self.observation_space)
         else:
