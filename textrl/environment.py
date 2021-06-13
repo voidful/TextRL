@@ -59,7 +59,8 @@ class TextRLEnv(gym.Env):
         predicted = self.predicted
         with torch.no_grad():
             pred_word = self.actions[vocab_id]
-            if pred_word == self.tokenizer.sep_token or len(pred_word) < 1:
+            if pred_word == self.tokenizer.sep_token or pred_word == self.tokenizer.eos_token \
+                    or len(pred_word) < 1 or len(self.predicted) > self.model.config.max_position_embeddings:
                 return predicted, True, self.tokenizer.convert_tokens_to_string(predicted)
             else:
                 predicted += [pred_word]
