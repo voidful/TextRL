@@ -32,7 +32,6 @@ class TextRLEnv(gym.Env):
         return reward
 
     def reset(self, input_text=None):
-        self.predicted = []
         if input_text is None:
             self.input_text = random.choice(self.observation_space)
         else:
@@ -41,10 +40,19 @@ class TextRLEnv(gym.Env):
 
     def _get_obs(self, predicted=[]):
         p_text = self.tokenizer.convert_tokens_to_string(predicted)
-        feature_dict = self.tokenizer([[self.input_text, p_text]], return_tensors='pt', add_special_tokens=False).to(
-            self.model.device)
-        prediction = self.model(**feature_dict, output_hidden_states=True)
-        outputs = prediction.decoder_hidden_states[-1].squeeze(0) if 'decoder_hidden_states' in prediction else prediction.hidden_states[-1].squeeze(0)
+        if hasattr(self.model.model, 'decoder'):
+            feature_dict = self.tokenizer([self.input_text], return_tensors='pt', add_special_tokens=False).to(
+                self.model.device)
+            predicted = [self.tokenizer.eos_token] + predicted
+            dec_input = torch.tensor([self.tokenizer.convert_tokens_to_ids(predicted)]).to(self.model.device)
+            feature_dict['decoder_input_ids'] = dec_input
+            prediction = self.model(**feature_dict, output_hidden_states=True)
+            outputs = prediction.decoder_hidden_states[-1].squeeze(0)
+        else:
+            feature_dict = self.tokenizer([[self.input_text, p_text]], return_tensors='pt',
+                                          add_special_tokens=False).to(self.model.device)
+            prediction = self.model(**feature_dict, output_hidden_states=True)
+            prediction.hidden_states[-1].squeeze(0)
         return outputs.data[-1]
 
     def _predict(self, vocab_id):
