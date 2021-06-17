@@ -53,7 +53,7 @@ class TextRLEnv(gym.Env):
             feature_dict = self.tokenizer([[self.input_text, p_text]], return_tensors='pt',
                                           add_special_tokens=False).to(self.model.device)
             prediction = self.model(**feature_dict, output_hidden_states=True)
-            prediction.hidden_states[-1].squeeze(0)
+            outputs = prediction.hidden_states[-1].squeeze(0)
         return outputs.data[-1]
 
     def _predict(self, vocab_id):
