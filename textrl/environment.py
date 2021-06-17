@@ -41,7 +41,7 @@ class TextRLEnv(gym.Env):
 
     def _get_obs(self, predicted=[]):
         p_text = self.tokenizer.convert_tokens_to_string(predicted)
-        if hasattr(self.model, 'decoder') and hasattr(self.model.model, 'decoder'):
+        if len([k for k, v in self.model.named_parameters() if 'decoder' in k]) > 0:
             feature_dict = self.tokenizer([self.input_text], return_tensors='pt', add_special_tokens=False).to(
                 self.model.device)
             predicted = [self.tokenizer.eos_token] + predicted
