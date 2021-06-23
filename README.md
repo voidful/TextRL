@@ -94,5 +94,6 @@ pfrl.experiments.train_agent_with_evaluation(
 
 ### prediction
 ```python
+agent.load("somewhere/best") # loading the best model
 actor.predict("input text")
 ```
