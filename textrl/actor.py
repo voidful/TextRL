@@ -7,7 +7,7 @@ import torch
 class TextRLActor:
     def __init__(self, env, model, tokenizer, device=0):
         self.agent = None
-        self.n_actions = tokenizer.vocab_size
+        self.n_actions = max(model.config.vocab_size, tokenizer.vocab_size)
         self.env = env
         self.device = device
         self.model = model
