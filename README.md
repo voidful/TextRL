@@ -7,6 +7,13 @@ Text generation with reinforcement learning using huggingface's transformer.
 This project is trying to use reinforcement learning to adjust text generation results.
 It is based on any text-generation model on huggingaface's [transformer](https://github.com/huggingface/transformers) with [PFRL](https://github.com/pfnet/pfrl) and [OpenAI GYM](https://gym.openai.com).
 
+## Example   
+[Controllable generation via RL to let Elon Musk speak ill of DOGE
+](https://voidful.dev/jupyter/2021/07/25/textrl-elon-musk.html)
+
+before: `i think dogecoin is a great idea.`    
+after: `i think dogecoin is a great idea, but I think it is a little overused.`    
+
 ## Installation
 ### pip install
 ```bash
@@ -96,4 +103,9 @@ pfrl.experiments.train_agent_with_evaluation(
 ```python
 agent.load("somewhere/best") # loading the best model
 actor.predict("input text")
+```
+
+## dump trained model to huggingface's model
+```shell
+textrl-dump --model ./model_path_before_rl --rl ./rl_path --dump ./output_dir
 ```

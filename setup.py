@@ -25,6 +25,9 @@ setup(
         "gym",
         "transformers"
     ],
+    entry_points={
+        'console_scripts': ['textrl-dump=textrl.dump:main']
+    },
     python_requires=">=3.5.0",
     zip_safe=False,
 )
