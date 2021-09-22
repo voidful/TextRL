@@ -1,4 +1,6 @@
 # TextRL
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fvoidful%2FTextRL.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fvoidful%2FTextRL?ref=badge_shield)
+
 
 Text generation with reinforcement learning using huggingface's transformer.
 
@@ -109,3 +111,6 @@ actor.predict("input text")
 ```shell
 textrl-dump --model ./model_path_before_rl --rl ./rl_path --dump ./output_dir
 ```
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fvoidful%2FTextRL.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fvoidful%2FTextRL?ref=badge_large)
