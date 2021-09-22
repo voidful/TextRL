@@ -1,46 +1,57 @@
 # TextRL
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fvoidful%2FTextRL.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fvoidful%2FTextRL?ref=badge_shield)
 
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fvoidful%2FTextRL.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fvoidful%2FTextRL?ref=badge_shield)
 
 Text generation with reinforcement learning using huggingface's transformer.
 
 ## Introduction
 
-This project is trying to use reinforcement learning to adjust text generation results.
-It is based on any text-generation model on huggingaface's [transformer](https://github.com/huggingface/transformers) with [PFRL](https://github.com/pfnet/pfrl) and [OpenAI GYM](https://gym.openai.com).
+This project is trying to use reinforcement learning to adjust text generation
+results. It is based on any text-generation model on huggingaface's
+[transformer](https://github.com/huggingface/transformers) with
+[PFRL](https://github.com/pfnet/pfrl) and [OpenAI GYM](https://gym.openai.com).
 
-## Example   
-[Controllable generation via RL to let Elon Musk speak ill of DOGE
-](https://voidful.dev/jupyter/2021/07/25/textrl-elon-musk.html)
+## Example
 
-before: `i think dogecoin is a great idea.`    
-after: `i think dogecoin is a great idea, but I think it is a little overused.`    
+[Controllable generation via RL to let Elon Musk speak ill of DOGE ](https://voidful.dev/jupyter/2021/07/25/textrl-elon-musk.html)
+
+before: `i think dogecoin is a great idea.`  
+after: `i think dogecoin is a great idea, but I think it is a little overused.`
 
 ## Installation
+
 ### pip install
+
 ```bash
 pip install textrl
 ```
 
 ### Build from source
+
 git clone and cd into this project.
+
 ```bash
 pip install -e .
 ```
 
 ## Usage
+
 ### init agent and environment
+
 ```python
 from textrl import TextRLEnv,TextRLActor
 
-from transformers import AutoTokenizer, AutoModelWithLMHead  
-tokenizer = AutoTokenizer.from_pretrained("any models")  
+from transformers import AutoTokenizer, AutoModelWithLMHead
+tokenizer = AutoTokenizer.from_pretrained("any models")
 model = AutoModelWithLMHead.from_pretrained("any models")
 model.eval()
 ```
+
 ### setup reward function for environment
-* predicted(list[str]): will be the list of predicted token
-* finish(bool): it met the end of sentence or not
+
+- predicted(list[str]): will be the list of predicted token
+- finish(bool): it met the end of sentence or not
+
 ```python
 class MyRLEnv(TextRLEnv):
     def get_reward(self, input_text, predicted_list, finish): # predicted will be the list of predicted token
@@ -52,7 +63,10 @@ class MyRLEnv(TextRLEnv):
 ```
 
 ### prepare for training
-* observation_input should be a list of all possible input string for model training
+
+- observation_input should be a list of all possible input string for model
+  training
+
 ```python
 env = MyRLEnv(model, tokenizer, observation_input=observaton_list)
 actor = TextRLActor(env,model,tokenizer)
@@ -60,14 +74,15 @@ agent = actor.agent_ppo(update_interval=10, minibatch_size=2000, epochs=20)
 ```
 
 ### Train
+
 ```python
 n_episodes = 1000
 max_episode_len = 200 # max sentence length
 
 for i in range(1, n_episodes + 1):
     obs = env.reset()
-    R = 0 
-    t = 0 
+    R = 0
+    t = 0
     while True:
         action = agent.act(obs)
         obs, reward, done, pred = env.step(action)
@@ -83,7 +98,9 @@ for i in range(1, n_episodes + 1):
         print('statistics:', agent.get_statistics())
 print('Finished.')
 ```
+
 another way to train
+
 ```python
 import logging
 import sys
@@ -94,23 +111,26 @@ pfrl.experiments.train_agent_with_evaluation(
     env,
     steps=1000,
     eval_n_steps=None,
-    eval_n_episodes=1500,       
-    train_max_episode_len=50,  
+    eval_n_episodes=1500,
+    train_max_episode_len=50,
     eval_interval=10000,
-    outdir='somewhere', 
+    outdir='somewhere',
 )
 ```
 
 ### prediction
+
 ```python
 agent.load("somewhere/best") # loading the best model
 actor.predict("input text")
 ```
 
 ## dump trained model to huggingface's model
+
 ```shell
 textrl-dump --model ./model_path_before_rl --rl ./rl_path --dump ./output_dir
 ```
 
 ## License
+
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fvoidful%2FTextRL.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fvoidful%2FTextRL?ref=badge_large)
