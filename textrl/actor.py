@@ -1,9 +1,11 @@
 import copy
-
-import pfrl
 import torch
 import torch.nn.functional as F
-from pfrl.agents.ppo import _elementwise_clip
+try:
+    import pfrl
+    from pfrl.agents.ppo import _elementwise_clip
+except:
+    print("plz install pfrl via: pfrl@git+https://github.com/voidful/pfrl.git")
 
 
 class TextRLActor:

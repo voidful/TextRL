@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='textrl',
-    version='0.1.3',
+    version='0.1.4',
     description='TextRL - use reinforcement learning to adjust text generation results.',
     url='https://github.com/voidful/TextRL',
     author='Voidful',
@@ -21,7 +21,6 @@ setup(
     keywords='transformer huggingface nlp generation reinforcement learning deep learning',
     packages=find_packages(),
     install_requires=[
-        "pfrl@git+https://github.com/voidful/pfrl.git",
         "gym",
         "transformers"
     ],
