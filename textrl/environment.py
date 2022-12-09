@@ -6,11 +6,12 @@ import torch
 
 
 class TextRLEnv(gym.Env):
-    def __init__(self, model, tokenizer, observation_input=[]):
+    def __init__(self, model, tokenizer, observation_input=[], max_length=100):
         vocabs = list(dict(sorted(tokenizer.vocab.items(), key=lambda item: item[1])).keys())
         self.action_space = gym.spaces.Discrete(len(vocabs))
         self.actions = vocabs
         self.model = model
+        self.env_max_length = max_length
         self.tokenizer = tokenizer
         self.observation_space = observation_input
         self.target_table = {}
@@ -48,8 +49,7 @@ class TextRLEnv(gym.Env):
             if len([k for k, v in self.model.named_parameters() if 'decoder' in k]) > 0:
                 feature_dict = self.tokenizer([self.gat_obs_input(self.input_item)],
                                               return_tensors='pt',
-                                              add_special_tokens=False).to(
-                    self.model.device)
+                                              add_special_tokens=False).to(self.model.device)
                 predicted = [self.tokenizer.eos_token] + predicted
                 dec_input = torch.tensor([self.tokenizer.convert_tokens_to_ids(predicted)]).to(self.model.device)
                 feature_dict['decoder_input_ids'] = dec_input
@@ -68,8 +68,11 @@ class TextRLEnv(gym.Env):
         with torch.no_grad():
             pred_word = self.actions[vocab_id]
             model_max_length = max(self.model.config.max_length, self.tokenizer.model_max_length)
-            if pred_word == self.tokenizer.sep_token or pred_word == self.tokenizer.eos_token \
-                    or len(pred_word) < 1 or len(self.predicted) > model_max_length:
+            if pred_word == self.tokenizer.sep_token \
+                    or pred_word == self.tokenizer.eos_token \
+                    or len(pred_word) < 1 \
+                    or len(self.predicted) > model_max_length \
+                    or len(self.predicted) > self.env_max_length:
                 return predicted, True, self.tokenizer.convert_tokens_to_string(predicted)
             else:
                 predicted += [pred_word]

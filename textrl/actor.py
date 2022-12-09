@@ -1,11 +1,9 @@
 import copy
+
+import pfrl
 import torch
 import torch.nn.functional as F
-try:
-    import pfrl
-    from pfrl.agents.ppo import _elementwise_clip
-except:
-    print("plz install pfrl via: pfrl@git+https://github.com/voidful/pfrl.git")
+from pfrl.agents.ppo import _elementwise_clip
 
 
 class TextRLActor:
@@ -102,5 +100,6 @@ class TextPPO(pfrl.agents.PPO):
 
 
 class SoftmaxCategoricalHead(torch.nn.Module):
-    def forward(self, logits, temperature=1):
-        return torch.distributions.Categorical(logits=logits / temperature)
+    def forward(self, logits, temperature=0.1):
+        softmax = torch.nn.Softmax(dim=1)
+        return torch.distributions.Categorical(probs=softmax(logits / temperature))
