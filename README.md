@@ -12,7 +12,7 @@ with [PFRL](https://github.com/pfnet/pfrl) and [OpenAI GYM](https://gym.openai.c
 ## Example
 
 [Controllable generation via RL to let Elon Musk speak ill of DOGE
-](https://voidful.dev/jupyter/2021/07/25/textrl-elon-musk.html)
+](https://voidful.dev/jupyter/2022/12/10/textrl-elon-musk.html)
 
 before: `i think dogecoin is a great idea.`    
 after: `i think dogecoin is a great idea, but I think it is a little overused.`
