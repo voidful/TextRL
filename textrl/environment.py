@@ -1,4 +1,6 @@
+import logging
 import random
+import sys
 
 import gym
 import numpy
@@ -17,8 +19,15 @@ class TextRLEnv(gym.Env):
         self.target_table = {}
         self.input_item = [""]
         self.predicted = []
-
         self.reset()
+
+        self.gen_stop_toks = []
+        logging.disable(sys.maxsize)
+        if self.tokenizer.sep_token:
+            self.gen_stop_toks.append(self.tokenizer.sep_token)
+        if self.tokenizer.eos_token:
+            self.gen_stop_toks.append(self.tokenizer.eos_token)
+        logging.disable(logging.NOTSET)
 
     def step(self, action):
         if isinstance(action, numpy.ndarray):
@@ -68,8 +77,7 @@ class TextRLEnv(gym.Env):
         with torch.no_grad():
             pred_word = self.actions[vocab_id]
             model_max_length = max(self.model.config.max_length, self.tokenizer.model_max_length)
-            if pred_word == self.tokenizer.sep_token \
-                    or pred_word == self.tokenizer.eos_token \
+            if pred_word in self.gen_stop_toks \
                     or len(pred_word) < 1 \
                     or len(self.predicted) > model_max_length \
                     or len(self.predicted) > self.env_max_length:
