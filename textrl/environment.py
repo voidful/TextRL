@@ -53,7 +53,7 @@ class TextRLEnv(gym.Env):
         return self._get_obs()
 
     def _get_obs(self, predicted=[]):
-        with torch.no_grad():
+        with torch.inference_mode():
             p_text = self.tokenizer.convert_tokens_to_string(predicted)
             if len([k for k, v in self.model.named_parameters() if 'decoder' in k]) > 0:
                 feature_dict = self.tokenizer([self.gat_obs_input(self.input_item)],
@@ -74,7 +74,7 @@ class TextRLEnv(gym.Env):
 
     def _predict(self, vocab_id):
         predicted = self.predicted
-        with torch.no_grad():
+        with torch.inference_mode():
             pred_word = self.actions[vocab_id]
             model_max_length = max(self.model.config.max_length, self.tokenizer.model_max_length)
             if pred_word in self.gen_stop_toks \

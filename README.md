@@ -10,7 +10,49 @@ This project is trying to use reinforcement learning to adjust text generation r
 text-generation model on huggingaface's [transformer](https://github.com/huggingface/transformers)
 with [PFRL](https://github.com/pfnet/pfrl) and [OpenAI GYM](https://gym.openai.com).
 
-## Example
+## Example 1
+
+Run on 7B multi-lingual bloom: `bigscience/bloomz-7b1-mt`
+```python
+import pfrl
+from textrl import TextRLEnv, TextRLActor
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+checkpoint = "bigscience/bloomz-7b1-mt"
+
+tokenizer = AutoTokenizer.from_pretrained(checkpoint)
+model = AutoModelForCausalLM.from_pretrained(checkpoint, torch_dtype="auto", device_map="auto")
+
+model = model.cuda()
+
+class MyRLEnv(TextRLEnv):
+    def get_reward(self, input_item, predicted_list, finish):  # predicted will be the list of predicted token
+        reward = 0
+        if finish:
+            reward = len(predicted_list)
+        return reward
+
+observaton_list = [["explain how attention work in seq2seq model"]]
+env = MyRLEnv(model, tokenizer, observation_input=observaton_list)
+actor = TextRLActor(env, model, tokenizer,act_deterministically=True)
+agent = actor.agent_ppo(update_interval=2, minibatch_size=2, epochs=10)
+
+print(actor.predict(observaton_list[0]))
+
+pfrl.experiments.train_agent_batch_with_evaluation(
+    agent,
+    env,
+    steps=100,
+    eval_n_steps=None,
+    eval_n_episodes=1,       
+    eval_interval=2,
+    outdir='bloom—test', 
+)
+
+print(actor.predict(observaton_list[0]))
+```
+
+## Example 2
 
 [Controllable generation via RL to let Elon Musk speak ill of DOGE
 ](https://voidful.dev/jupyter/2022/12/10/textrl-elon-musk.html)
@@ -40,13 +82,18 @@ pip install -e .
 ### init agent and environment
 
 ```python
+import torch
 from textrl import TextRLEnv, TextRLActor
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from transformers import AutoTokenizer, AutoModelWithLMHead
+checkpoint = "bigscience/bloomz-7b1-mt"
 
-tokenizer = AutoTokenizer.from_pretrained("any models")
-model = AutoModelWithLMHead.from_pretrained("any models")
-model.eval()
+tokenizer = AutoTokenizer.from_pretrained(checkpoint)
+model = AutoModelForCausalLM.from_pretrained(checkpoint, torch_dtype="auto", device_map="auto")
+
+model = model.cuda()
+
+
 ```
 
 ### setup reward function for environment
@@ -66,7 +113,8 @@ class MyRLEnv(TextRLEnv):
 
 ### prepare for training
 
-* observation_input should be a list of all possible input string for model training
+* observaton_list should be a list of all possible input string for model training
+  eg: `observaton_list = [['testing sent 1'],['testing sent 2']]`
 
 ```python
 env = MyRLEnv(model, tokenizer, observation_input=observaton_list)

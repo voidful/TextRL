@@ -49,7 +49,7 @@ class TextRLActor:
     @autocast('cuda')
     def predict(self, input_item, max_episode_len=100):
         t = 0
-        with torch.no_grad():
+        with torch.inference_mode():
             with self.agent.eval_mode():
                 obs = self.env.reset(input_item)
                 while True:
