@@ -13,12 +13,12 @@ class TextRLEnv(gym.Env):
         self.action_space = gym.spaces.Discrete(len(vocabs))
         self.actions = vocabs
         self.model = model
-        self.env_max_length = max_length
         self.tokenizer = tokenizer
         self.observation_space = observation_input
         self.target_table = {}
         self.input_item = [""]
         self.predicted = []
+        self.env_max_length = min(max(self.model.config.max_length, self.tokenizer.model_max_length), max_length)
         self.reset()
 
         self.gen_stop_toks = []
@@ -35,6 +35,7 @@ class TextRLEnv(gym.Env):
         predicted, finish, predicted_str = self._predict(vocab_id=action)
         reward = self.get_reward(self.input_item, predicted, finish)
         self.predicted = predicted
+        print(predicted_str)
         return self._get_obs(predicted), reward, finish, {"predicted_str": predicted_str}
 
     def get_reward(self, input_item, predicted_list, finish):
@@ -65,21 +66,29 @@ class TextRLEnv(gym.Env):
                 prediction = self.model(**feature_dict, output_hidden_states=True)
                 outputs = prediction.decoder_hidden_states[-1].squeeze(0)
             else:
-                feature_dict = self.tokenizer([[self.gat_obs_input(self.input_item), p_text]],
-                                              return_tensors='pt',
-                                              add_special_tokens=False).to(self.model.device)
-                prediction = self.model(**feature_dict, output_hidden_states=True)
-                outputs = prediction.hidden_states[-1].squeeze(0)
+                if self.model.__class__.__name__ == 'DistributedBloomForCausalLM':
+                    with self.model.inference_session(max_length=self.env_max_length) as sess:
+                        feature_dict = self.tokenizer([[self.gat_obs_input(self.input_item), p_text]],
+                                                      return_tensors='pt',
+                                                      add_special_tokens=False).to(self.model.device)
+                        embs = self.model.transformer.word_embeddings(feature_dict.input_ids)
+                        embs = self.model.transformer.word_embeddings_layernorm(embs)
+                        h = sess.step(embs)
+                        outputs = self.model.transformer.ln_f(h[:, -1])
+                else:
+                    feature_dict = self.tokenizer([[self.gat_obs_input(self.input_item), p_text]],
+                                                  return_tensors='pt',
+                                                  add_special_tokens=False).to(self.model.device)
+                    prediction = self.model(**feature_dict, output_hidden_states=True)
+                    outputs = prediction.hidden_states[-1].squeeze(0)
             return outputs.data[-1]
 
     def _predict(self, vocab_id):
         predicted = self.predicted
         with torch.inference_mode():
             pred_word = self.actions[vocab_id]
-            model_max_length = max(self.model.config.max_length, self.tokenizer.model_max_length)
             if pred_word in self.gen_stop_toks \
                     or len(pred_word) < 1 \
-                    or len(self.predicted) > model_max_length \
                     or len(self.predicted) > self.env_max_length:
                 return predicted, True, self.tokenizer.convert_tokens_to_string(predicted)
             else:

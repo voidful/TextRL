@@ -1,12 +1,14 @@
+import itertools
+
 import pfrl
 import torch
 import torch.nn.functional as F
 from pfrl.agents.ppo import _elementwise_clip
 from torch import autocast
-import itertools
 
 
 class TextRLActor:
+    @autocast('cuda')
     def __init__(self, env, model, tokenizer, device=0, act_deterministically=True):
         self.agent = None
         self.n_actions = max(model.config.vocab_size, tokenizer.vocab_size)
