@@ -114,6 +114,7 @@ class MyRLEnv(TextRLEnv):
 ### prepare for training
 
 * observaton_list should be a list of all possible input string for model training
+  
   eg: `observaton_list = [['testing sent 1'],['testing sent 2']]`
 
 ```python
