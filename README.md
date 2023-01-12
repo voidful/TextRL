@@ -39,7 +39,7 @@ agent = actor.agent_ppo(update_interval=2, minibatch_size=2, epochs=10)
 
 print(actor.predict(observaton_list[0]))
 
-pfrl.experiments.train_agent_batch_with_evaluation(
+pfrl.experiments.train_agent_with_evaluation(
     agent,
     env,
     steps=100,
