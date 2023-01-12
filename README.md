@@ -34,7 +34,7 @@ class MyRLEnv(TextRLEnv):
 
 observaton_list = [["explain how attention work in seq2seq model"]]
 env = MyRLEnv(model, tokenizer, observation_input=observaton_list)
-actor = TextRLActor(env, model, tokenizer,act_deterministically=True)
+actor = TextRLActor(env, model, tokenizer,act_deterministically=False)
 agent = actor.agent_ppo(update_interval=2, minibatch_size=2, epochs=10)
 
 print(actor.predict(observaton_list[0]))
@@ -53,6 +53,52 @@ print(actor.predict(observaton_list[0]))
 ```
 
 ## Example 2
+Training on 176B BLOOM model using petals.   
+
+Strongly recommend joining swarm to increase petals capacity
+
+https://github.com/bigscience-workshop/petals
+
+install `pip install petals -U` first
+```python
+import pfrl
+from textrl import TextRLEnv, TextRLActor
+from transformers import BloomTokenizerFast 
+from petals import DistributedBloomForCausalLM
+
+MODEL_NAME = "bigscience/bloom-petals"
+tokenizer = BloomTokenizerFast.from_pretrained(MODEL_NAME)
+model = DistributedBloomForCausalLM.from_pretrained(MODEL_NAME)
+model = model.cuda()
+
+class MyRLEnv(TextRLEnv):
+    def get_reward(self, input_item, predicted_list, finish):  # predicted will be the list of predicted token
+        reward = 0
+        if finish:
+            reward = len(predicted_list)
+        return reward
+
+observaton_list = [["explain how attention work in seq2seq model"]]
+env = MyRLEnv(model, tokenizer, observation_input=observaton_list)
+actor = TextRLActor(env, model, tokenizer,act_deterministically=False)
+agent = actor.agent_ppo(update_interval=2, minibatch_size=2, epochs=10)
+
+print(actor.predict(observaton_list[0]))
+
+pfrl.experiments.train_agent_with_evaluation(
+    agent,
+    env,
+    steps=100,
+    eval_n_steps=None,
+    eval_n_episodes=1,       
+    eval_interval=2,
+    outdir='bloom—test', 
+)
+
+print(actor.predict(observaton_list[0]))
+```
+
+## Example 3
 
 [Controllable generation via RL to let Elon Musk speak ill of DOGE
 ](https://voidful.dev/jupyter/2022/12/10/textrl-elon-musk.html)
