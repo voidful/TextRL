@@ -5,6 +5,7 @@ import torch
 import torch.nn.functional as F
 from pfrl.agents.ppo import _elementwise_clip
 from torch import autocast
+from transformers import top_k_top_p_filtering
 
 
 class TextRLActor:
@@ -157,7 +158,16 @@ class TextPPO(pfrl.agents.PPO):
 
 
 class SoftmaxCategoricalHead(torch.nn.Module):
+    def __init__(self, temperature=0.3, total_num_of_trial=3, top_k=0, top_p=1.0):
+        super().__init__()
+        self.softmax = torch.nn.Softmax(dim=-1)
+        self.temperature = temperature
+        self.total_num_of_trial = total_num_of_trial
+        self.top_k = top_k
+        self.top_p = top_p
+
     @autocast('cuda')
-    def forward(self, logits, temperature=0.3):
-        softmax = torch.nn.Softmax(dim=1)
-        return torch.distributions.Categorical(probs=softmax(logits / temperature))
+    def forward(self, logits):
+        logits = logits / self.temperature
+        logits = top_k_top_p_filtering(logits, top_k=self.top_k, top_p=self.top_p)
+        return torch.distributions.Multinomial(total_count=self.total_num_of_trial, probs=self.softmax(logits))
