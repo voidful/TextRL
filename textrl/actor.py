@@ -10,32 +10,50 @@ from transformers import top_k_top_p_filtering
 
 class TextRLActor:
     @autocast('cuda')
-    def __init__(self, env, model, tokenizer, device=0, act_deterministically=True):
+    def __init__(self, env, model, tokenizer, gpu_id=0, act_deterministically=True,
+                 temperature=0.6,
+                 compare_sample=3,
+                 top_k=0,
+                 top_p=1.0,
+                 repetition_penalty=1.0):
         self.agent = None
         self.n_actions = max(model.config.vocab_size, tokenizer.vocab_size)
         self.env = env
-        self.device = device
+        self.gpu_id = gpu_id
+        self.device = torch.device("cuda:{}".format(gpu_id))
         self.model = model
         self.obs_size = model.config.hidden_size
         self.converter = self.model.lm_head
         self.act_deterministically = act_deterministically
+        self.temperature = temperature
+        self.compare_sample = compare_sample * 2
+        self.top_k = top_k
+        self.tok_p = top_p
+        self.repetition_penalty = repetition_penalty
 
     @autocast('cuda')
-    def agent_ppo(self, update_interval=10, minibatch_size=3000, epochs=20):
+    def agent_ppo(self, update_interval=10, minibatch_size=3000, epochs=20, lr=5e-5):
         policy = torch.nn.Sequential(
             self.converter,
-            SoftmaxCategoricalHead()
+            torch.nn.Flatten(start_dim=0, end_dim=1),
+            SoftmaxCategoricalHead(self.env,
+                                   temperature=self.temperature,
+                                   compare_sample=self.compare_sample,
+                                   top_k=self.top_k,
+                                   top_p=self.tok_p,
+                                   repetition_penalty=self.repetition_penalty)
         )
         vf = torch.nn.Sequential(
+            torch.nn.Flatten(start_dim=0, end_dim=1),
             torch.nn.Linear(self.obs_size, 1),
         )
         model = pfrl.nn.Branched(policy, vf)
-        opt = torch.optim.SGD(model.parameters(), lr=5e-5)
+        opt = torch.optim.SGD(model.parameters(), lr=lr)
         model = model.cuda()
         agent = TextPPO(
             model,
             opt,
-            gpu=self.device,
+            gpu=self.gpu_id,
             update_interval=update_interval,
             minibatch_size=minibatch_size,
             epochs=epochs,
@@ -50,7 +68,7 @@ class TextRLActor:
         return agent
 
     @autocast('cuda')
-    def predict(self, input_item, max_episode_len=100):
+    def predict(self, input_item):
         t = 0
         with torch.inference_mode():
             with self.agent.eval_mode():
@@ -59,10 +77,39 @@ class TextRLActor:
                     action = self.agent.act(obs)
                     obs, reward, done, pred = self.env.step(action)
                     t += 1
-                    reset = t >= max_episode_len
+                    reset = t >= self.env.env_max_length
                     self.agent.observe(obs, reward, done, reset)
                     if done or reset:
                         return pred.get('predicted_str')
+
+
+class SoftmaxCategoricalHead(torch.nn.Module):
+    def __init__(self, env, temperature=0.6, compare_sample=3, top_k=0, top_p=1.0, repetition_penalty=1.0):
+        super().__init__()
+        self.env = env
+        self.softmax = torch.nn.Softmax(dim=-1)
+        self.temperature = temperature
+        self.compare_sample = compare_sample
+        self.top_k = top_k
+        self.top_p = top_p
+        self.repetition_penalty = repetition_penalty
+
+    @autocast('cuda')
+    def forward(self, logits):
+        # repetition penalty from CTRL paper (https://arxiv.org/abs/1909.05858)
+        # repetition penalty from https://github.com/huggingface/transformers/pull/2303/files#diff-6b72b98c4c2dcfc6cc606843917733f5d858374fbc22a735ff483bbc0c1e63ea
+        if self.repetition_penalty != 1.0:
+            for seq_num, predicted in enumerate(self.env.predicted):
+                for previous_tokens in set(predicted):
+                    prev_token_id = self.env.tokenizer.convert_tokens_to_ids(previous_tokens)
+                    # if score < 0 then repetition penalty has to multiplied to reduce the previous token probability
+                    if logits[seq_num, prev_token_id] < 0:
+                        logits[seq_num, prev_token_id] *= self.repetition_penalty
+                    else:
+                        logits[seq_num, prev_token_id] /= self.repetition_penalty
+        logits = logits / self.temperature
+        logits = top_k_top_p_filtering(logits, top_k=self.top_k, top_p=self.top_p)
+        return torch.distributions.Multinomial(total_count=self.compare_sample, probs=self.softmax(logits))
 
 
 class TextPPO(pfrl.agents.PPO):
@@ -155,19 +202,3 @@ class TextPPO(pfrl.agents.PPO):
                 + self.entropy_coef * loss_entropy
         )
         return loss
-
-
-class SoftmaxCategoricalHead(torch.nn.Module):
-    def __init__(self, temperature=0.3, total_num_of_trial=3, top_k=0, top_p=1.0):
-        super().__init__()
-        self.softmax = torch.nn.Softmax(dim=-1)
-        self.temperature = temperature
-        self.total_num_of_trial = total_num_of_trial
-        self.top_k = top_k
-        self.top_p = top_p
-
-    @autocast('cuda')
-    def forward(self, logits):
-        logits = logits / self.temperature
-        logits = top_k_top_p_filtering(logits, top_k=self.top_k, top_p=self.top_p)
-        return torch.distributions.Multinomial(total_count=self.total_num_of_trial, probs=self.softmax(logits))

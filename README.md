@@ -29,14 +29,19 @@ class MyRLEnv(TextRLEnv):
     def get_reward(self, input_item, predicted_list, finish):  # predicted will be the list of predicted token
         reward = 0
         if finish:
-            reward = len(predicted_list)
+            reward = 1 # calculate reward score base on predicted_list
         return reward
 
 observaton_list = [["explain how attention work in seq2seq model"]]
-env = MyRLEnv(model, tokenizer, observation_input=observaton_list)
-actor = TextRLActor(env, model, tokenizer,act_deterministically=False)
+env = TextRLEnv(model, tokenizer, observation_input=observaton_list,max_length=20, compare_sample=2)
+actor = TextRLActor(env, model, tokenizer,
+                    act_deterministically=False,
+                    temperature=1,
+                    compare_sample=2,
+                    top_k=0,
+                    top_p=1.0,
+                   repetition_penalty=2)
 agent = actor.agent_ppo(update_interval=2, minibatch_size=2, epochs=10)
-
 print(actor.predict(observaton_list[0]))
 
 pfrl.experiments.train_agent_with_evaluation(
@@ -75,12 +80,18 @@ class MyRLEnv(TextRLEnv):
     def get_reward(self, input_item, predicted_list, finish):  # predicted will be the list of predicted token
         reward = 0
         if finish:
-            reward = len(predicted_list)
+            reward = 1 # calculate reward score base on predicted_list
         return reward
 
 observaton_list = [["explain how attention work in seq2seq model"]]
-env = MyRLEnv(model, tokenizer, observation_input=observaton_list)
-actor = TextRLActor(env, model, tokenizer,act_deterministically=False)
+env = TextRLEnv(model, tokenizer, observation_input=observaton_list,max_length=20, compare_sample=2)
+actor = TextRLActor(env, model, tokenizer,
+                    act_deterministically=False,
+                    temperature=1,
+                    compare_sample=2,
+                    top_k=0,
+                    top_p=1.0,
+                   repetition_penalty=2)
 agent = actor.agent_ppo(update_interval=2, minibatch_size=2, epochs=10)
 
 print(actor.predict(observaton_list[0]))
@@ -150,10 +161,8 @@ model = model.cuda()
 ```python
 class MyRLEnv(TextRLEnv):
     def get_reward(self, input_item, predicted_list, finish):  # predicted will be the list of predicted token
-        if "[UNK]" in predicted_list:
-            reward = -1
-        else:
-            reward = 1
+        if finish:
+            reward = 0 # calculate reward score base on predicted_list
         return reward
 ```
 
