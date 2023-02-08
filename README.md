@@ -10,6 +10,35 @@ This project is trying to use reinforcement learning to adjust text generation r
 text-generation model on huggingaface's [transformer](https://github.com/huggingface/transformers)
 with [PFRL](https://github.com/pfnet/pfrl) and [OpenAI GYM](https://gym.openai.com).
 
+## Key parameter for RL training
+To finetune language model using RL, you basically need to modify the reward function:
+```python
+from textrl import TextRLEnv
+class MyRLEnv(TextRLEnv):
+    def get_reward(self, input_item, predicted_list, finish):
+        # input_item is the prompt input for the model, it will be one of your observation
+        # an observation will be a list of sentence of eg: ['inputted sentence','xxx','yyy']
+        # only the first input will feed to the model 'inputted sentence', and 
+        # the remaining can be the reference for reward calculation
+        
+        # predicted_list is the list of predicted sentences of RL model generated,
+        # it will be used for ranking reward calculation
+        
+        # finish is the end of sentences flags, get_reward will be called during generating each word, and 
+        # when finish is True, it means the sentence is finished, it will use for sentence level reward calculation.
+      return reward
+```
+parameters for sampling diverse example:
+```python 
+actor = TextRLActor(env, model, tokenizer,
+                    act_deterministically=False,  # select the max probability token for each step or not
+                    temperature=1,                # temperature for sampling
+                    compare_sample=2,             # num of sample to rank
+                    top_k=0,                      # top k sampling
+                    top_p=1.0,                    # top p sampling
+                    repetition_penalty=2)         # repetition penalty from CTRL paper (https://arxiv.org/abs/1909.05858)
+```
+
 ## Example 1
 
 Run on 7B multi-lingual bloom: `bigscience/bloomz-7b1-mt`
@@ -40,7 +69,7 @@ actor = TextRLActor(env, model, tokenizer,
                     compare_sample=2,
                     top_k=0,
                     top_p=1.0,
-                   repetition_penalty=2)
+                    repetition_penalty=2)
 agent = actor.agent_ppo(update_interval=2, minibatch_size=2, epochs=10)
 print(actor.predict(observaton_list[0]))
 
