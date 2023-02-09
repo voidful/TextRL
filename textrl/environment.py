@@ -5,6 +5,7 @@ import sys
 import gym
 import numpy
 import torch
+from torch import autocast
 
 
 class TextRLEnv(gym.Env):
@@ -52,6 +53,7 @@ class TextRLEnv(gym.Env):
     def gat_obs_input(self, input_item):
         return input_item[0]
 
+    @autocast('cuda')
     def reset(self, input_item=None):
         self.predicted = [['']] * self.compare_sample
         self.predicted_end = [False] * self.compare_sample
@@ -62,19 +64,28 @@ class TextRLEnv(gym.Env):
             self.input_item = input_item
         return self._get_obs([['']] * self.compare_sample)
 
+    @autocast('cuda')
     def _get_obs(self, predicted=[]):
         with torch.inference_mode():
             obs_list = []
             for p_text in predicted:
                 p_text_str = self.tokenizer.convert_tokens_to_string(p_text)
                 if len([k for k, v in self.model.named_parameters() if 'decoder' in k]) > 0:
-                    feature_dict = self.tokenizer([self.gat_obs_input(self.input_item)],
-                                                  return_tensors='pt',
-                                                  add_special_tokens=False).to(self.model.device)
-                    dec_input = torch.tensor([self.tokenizer.convert_tokens_to_ids(p_text_str)]).to(self.model.device)
-                    feature_dict['decoder_input_ids'] = dec_input
-                    prediction = self.model(**feature_dict, output_hidden_states=True)
-                    outputs = prediction.decoder_hidden_states[-1].squeeze(0)
+                        feature_dict = self.tokenizer([self.gat_obs_input(self.input_item)],
+                                                      return_tensors='pt',
+                                                      add_special_tokens=True).to(self.model.device)
+                        if len(p_text) > 1:
+                            decoder_input_ids = [
+                                                    self.model.config.decoder_start_token_id] + self.tokenizer.convert_tokens_to_ids(
+                                p_text)
+                            dec_input = torch.tensor([decoder_input_ids]).to(self.model.device)
+                            feature_dict['decoder_input_ids'] = dec_input
+                        else:
+                            feature_dict['decoder_input_ids'] = torch.tensor(
+                                [[self.model.config.decoder_start_token_id]]).to(self.model.device)
+                        with torch.cuda.amp.autocast(enabled=False):
+                            prediction = self.model(**feature_dict, output_hidden_states=True)
+                        outputs = prediction.decoder_hidden_states[-1].squeeze(0)
                 else:
                     if self.model.__class__.__name__ == 'DistributedBloomForCausalLM':
                         with self.model.inference_session(max_length=self.env_max_length) as sess:
@@ -92,6 +103,7 @@ class TextRLEnv(gym.Env):
                         prediction = self.model(**feature_dict, output_hidden_states=True)
                         outputs = prediction.hidden_states[-1].squeeze(0)
                 obs_list.append(outputs.data[-1])
+
             return torch.stack(obs_list) if len(obs_list) > 0 else obs_list
 
     def _predict(self, vocab_id):
