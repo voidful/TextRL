@@ -3,7 +3,6 @@ import random
 import sys
 
 import gym
-import numpy
 import torch
 from torch import autocast
 
@@ -31,23 +30,13 @@ class TextRLEnv(gym.Env):
         logging.disable(logging.NOTSET)
 
     def step(self, action):
-        # perform self.compare_sample * 2 sampling on the distribution
-        k = self.compare_sample * 2
-        # get largest k action
-        top_k_indices = numpy.argpartition(-action, k)[:k]
-        top_k_values = action[top_k_indices]
-        # Filter out values <= 0
-        top_k_values = top_k_values[top_k_values > 0]
-        top_k_indices = top_k_indices[:len(top_k_values)]
-        action = [elem for n, elem in zip(top_k_values, top_k_indices) for _ in range(int(n))]
-
         predicted, finish, predicted_str = self._predict(vocab_id=action)
         reward = self.get_reward(self.input_item, predicted, finish)
         self.predicted = predicted
         return self._get_obs(predicted), reward, finish, {"predicted_str": predicted_str}
 
     def get_reward(self, input_item, predicted_list, finish):
-        reward = 1
+        reward = [0] * self.compare_sample
         return reward
 
     def gat_obs_input(self, input_item):
@@ -55,14 +44,14 @@ class TextRLEnv(gym.Env):
 
     @autocast('cuda')
     def reset(self, input_item=None):
-        self.predicted = [['']] * self.compare_sample
+        self.predicted = [[]] * self.compare_sample
         self.predicted_end = [False] * self.compare_sample
         self.input_item = [""]
         if input_item is None:
             self.input_item = random.choice(self.observation_space)
         else:
             self.input_item = input_item
-        return self._get_obs([['']] * self.compare_sample)
+        return self._get_obs(self.predicted)
 
     @autocast('cuda')
     def _get_obs(self, predicted=[]):
@@ -71,21 +60,20 @@ class TextRLEnv(gym.Env):
             for p_text in predicted:
                 p_text_str = self.tokenizer.convert_tokens_to_string(p_text)
                 if len([k for k, v in self.model.named_parameters() if 'decoder' in k]) > 0:
-                        feature_dict = self.tokenizer([self.gat_obs_input(self.input_item)],
-                                                      return_tensors='pt',
-                                                      add_special_tokens=True).to(self.model.device)
-                        if len(p_text) > 1:
-                            decoder_input_ids = [
-                                                    self.model.config.decoder_start_token_id] + self.tokenizer.convert_tokens_to_ids(
-                                p_text)
-                            dec_input = torch.tensor([decoder_input_ids]).to(self.model.device)
-                            feature_dict['decoder_input_ids'] = dec_input
-                        else:
-                            feature_dict['decoder_input_ids'] = torch.tensor(
-                                [[self.model.config.decoder_start_token_id]]).to(self.model.device)
-                        with torch.cuda.amp.autocast(enabled=False):
-                            prediction = self.model(**feature_dict, output_hidden_states=True)
-                        outputs = prediction.decoder_hidden_states[-1].squeeze(0)
+                    feature_dict = self.tokenizer([self.gat_obs_input(self.input_item)],
+                                                  return_tensors='pt',
+                                                  add_special_tokens=True).to(self.model.device)
+                    if len(p_text) > 0:
+                        decoder_input_ids = [self.model.config.decoder_start_token_id] + \
+                                            self.tokenizer.convert_tokens_to_ids(p_text)
+                        dec_input = torch.tensor([decoder_input_ids]).to(self.model.device)
+                        feature_dict['decoder_input_ids'] = dec_input
+                    else:
+                        feature_dict['decoder_input_ids'] = torch.tensor(
+                            [[self.model.config.decoder_start_token_id]]).to(self.model.device)
+                    with torch.cuda.amp.autocast(enabled=False):
+                        prediction = self.model(**feature_dict, output_hidden_states=True)
+                    outputs = prediction.decoder_hidden_states[-1].squeeze(0)
                 else:
                     if self.model.__class__.__name__ == 'DistributedBloomForCausalLM':
                         with self.model.inference_session(max_length=self.env_max_length) as sess:
@@ -103,8 +91,7 @@ class TextRLEnv(gym.Env):
                         prediction = self.model(**feature_dict, output_hidden_states=True)
                         outputs = prediction.hidden_states[-1].squeeze(0)
                 obs_list.append(outputs.data[-1])
-
-            return torch.stack(obs_list) if len(obs_list) > 0 else obs_list
+            return torch.stack(obs_list)
 
     def _predict(self, vocab_id):
         predicted_list = {}
@@ -116,7 +103,7 @@ class TextRLEnv(gym.Env):
                     pred_word = self.actions[v_id]
                     if pred_word in self.gen_stop_toks \
                             or len(pred_word) < 1 \
-                            or len(self.predicted) > self.env_max_length:
+                            or len(predicted) > self.env_max_length:
                         predicted_list_end[i] = True
                         predicted_list[i] = [pred_word]
                     else:

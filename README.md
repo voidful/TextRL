@@ -28,6 +28,8 @@ class MyRLEnv(TextRLEnv):
         
         # finish is the end of sentences flags, get_reward will be called during generating each word, and 
         # when finish is True, it means the sentence is finished, it will use for sentence level reward calculation.
+        
+        # reward should be the list equal to the length of predicted_list
       return reward
 ```
 parameters for sampling diverse example:
@@ -43,13 +45,13 @@ actor = TextRLActor(env, model, tokenizer,
 
 ## Example 1
 
-Run on 7B multi-lingual bloom: `bigscience/bloomz-7b1-mt`
+Run on gpt2: `gpt2`
 ```python
 import pfrl
-from textrl import TextRLEnv, TextRLActor
+from textrl import TextRLEnv, TextRLActor, train_agent_with_evaluation
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-checkpoint = "bigscience/bloomz-7b1-mt"
+checkpoint = "gpt2"
 
 tokenizer = AutoTokenizer.from_pretrained(checkpoint)
 model = AutoModelForCausalLM.from_pretrained(checkpoint, torch_dtype="auto", device_map="auto")
@@ -58,9 +60,9 @@ model = model.cuda()
 
 class MyRLEnv(TextRLEnv):
     def get_reward(self, input_item, predicted_list, finish):  # predicted will be the list of predicted token
-        reward = 0
+        reward = [0]
         if finish:
-            reward = 1 # calculate reward score base on predicted_list
+            reward = [1] # calculate reward score base on predicted_list
         return reward
 
 observaton_list = [["explain how attention work in seq2seq model"]]
@@ -75,7 +77,7 @@ actor = TextRLActor(env, model, tokenizer,
 agent = actor.agent_ppo(update_interval=2, minibatch_size=2, epochs=10)
 print(actor.predict(observaton_list[0]))
 
-pfrl.experiments.train_agent_with_evaluation(
+train_agent_with_evaluation(
     agent,
     env,
     steps=100,
@@ -89,6 +91,53 @@ print(actor.predict(observaton_list[0]))
 ```
 
 ## Example 2
+
+Run on 7B multi-lingual bloom: `bigscience/bloomz-7b1-mt`
+```python
+import pfrl
+from textrl import TextRLEnv, TextRLActor, train_agent_with_evaluation
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+checkpoint = "bigscience/bloomz-7b1-mt"
+
+tokenizer = AutoTokenizer.from_pretrained(checkpoint)
+model = AutoModelForCausalLM.from_pretrained(checkpoint, torch_dtype="auto", device_map="auto")
+
+model = model.cuda()
+
+class MyRLEnv(TextRLEnv):
+    def get_reward(self, input_item, predicted_list, finish):  # predicted will be the list of predicted token
+        reward = [0]
+        if finish:
+            reward = [1] # calculate reward score base on predicted_list
+        return reward
+
+observaton_list = [["explain how attention work in seq2seq model"]]
+env = TextRLEnv(model, tokenizer, observation_input=observaton_list,max_length=20, compare_sample=2)
+actor = TextRLActor(env, model, tokenizer,
+                    act_deterministically=False,
+                    temperature=1,
+                    compare_sample=2,
+                    top_k=0,
+                    top_p=1.0,
+                    repetition_penalty=2)
+agent = actor.agent_ppo(update_interval=2, minibatch_size=2, epochs=10)
+print(actor.predict(observaton_list[0]))
+
+train_agent_with_evaluation(
+    agent,
+    env,
+    steps=100,
+    eval_n_steps=None,
+    eval_n_episodes=1,       
+    eval_interval=2,
+    outdir='bloom—test', 
+)
+
+print(actor.predict(observaton_list[0]))
+```
+
+## Example 3
 Training on 176B BLOOM model using petals.   
 
 Strongly recommend joining swarm to increase petals capacity
@@ -98,7 +147,7 @@ https://github.com/bigscience-workshop/petals
 install `pip install petals -U` first
 ```python
 import pfrl
-from textrl import TextRLEnv, TextRLActor
+from textrl import TextRLEnv, TextRLActor, train_agent_with_evaluation
 from transformers import BloomTokenizerFast 
 from petals import DistributedBloomForCausalLM
 
@@ -109,9 +158,9 @@ model = model.cuda()
 
 class MyRLEnv(TextRLEnv):
     def get_reward(self, input_item, predicted_list, finish):  # predicted will be the list of predicted token
-        reward = 0
+        reward = [0]
         if finish:
-            reward = 1 # calculate reward score base on predicted_list
+            reward = [1] # calculate reward score base on predicted_list
         return reward
 
 observaton_list = [["explain how attention work in seq2seq model"]]
@@ -127,7 +176,7 @@ agent = actor.agent_ppo(update_interval=2, minibatch_size=2, epochs=10)
 
 print(actor.predict(observaton_list[0]))
 
-pfrl.experiments.train_agent_with_evaluation(
+train_agent_with_evaluation(
     agent,
     env,
     steps=100,
@@ -140,7 +189,9 @@ pfrl.experiments.train_agent_with_evaluation(
 print(actor.predict(observaton_list[0]))
 ```
 
-## Example 3
+
+
+## Example 4
 
 [Controllable generation via RL to let Elon Musk speak ill of DOGE
 ](https://voidful.dev/jupyter/2022/12/10/textrl-elon-musk.html)
@@ -171,7 +222,7 @@ pip install -e .
 
 ```python
 import torch
-from textrl import TextRLEnv, TextRLActor
+from textrl import TextRLEnv, TextRLActor, train_agent_with_evaluation
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 checkpoint = "bigscience/bloomz-7b1-mt"
@@ -193,7 +244,7 @@ model = model.cuda()
 class MyRLEnv(TextRLEnv):
     def get_reward(self, input_item, predicted_list, finish):  # predicted will be the list of predicted token
         if finish:
-            reward = 0 # calculate reward score base on predicted_list
+            reward = [0] # calculate reward score base on predicted_list
         return reward
 ```
 
@@ -243,7 +294,7 @@ import sys
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout, format='')
 
-pfrl.experiments.train_agent_with_evaluation(
+train_agent_with_evaluation(
     agent,
     env,
     steps=1000,
