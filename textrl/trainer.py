@@ -1,8 +1,9 @@
 import logging
 import os
 
-from pfrl.experiments.evaluator import Evaluator, save_agent
 from pfrl.utils.ask_yes_no import ask_yes_no
+
+from textrl import Evaluator, save_agent
 
 
 def save_agent_replay_buffer(agent, t, outdir, suffix="", logger=None):
