@@ -217,7 +217,7 @@ print(actor.predict(observaton_list[0]))
 ## Example 4
 
 [Controllable generation via RL to let Elon Musk speak ill of DOGE
-](https://voidful.dev/jupyter/2022/12/10/textrl-elon-musk.html)
+](https://github.com/voidful/TextRL/blob/main/example/2022-12-10-textrl-elon-musk.ipynb)
 
 before: `i think dogecoin is a great idea.`    
 after: `i think dogecoin is a great idea, but I think it is a little overused.`
