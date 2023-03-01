@@ -43,9 +43,13 @@ actor = TextRLActor(env, model, tokenizer,
                     repetition_penalty=2)         # repetition penalty from CTRL paper (https://arxiv.org/abs/1909.05858)
 ```
 
-## Example 1
+## Example 1 - `gpt2`
 
-Run on gpt2: `gpt2`
+<details><summary>CLICK ME</summary>
+<p>
+
+#### GPT2 Example
+
 ```python
 import pfrl
 from textrl import TextRLEnv, TextRLActor, train_agent_with_evaluation
@@ -89,9 +93,18 @@ train_agent_with_evaluation(
 print(actor.predict(observaton_list[0]))
 ```
 
-## Example 2
 
-Run on 7B multi-lingual bloom: `bigscience/bloomz-7b1-mt`
+</p>
+</details>
+
+
+## Example 2 - `bigscience/bloomz-7b1-mt`
+
+<details><summary>CLICK ME</summary>
+<p>
+
+#### bloomz-7b1-mt Example
+
 ```python
 import pfrl
 from textrl import TextRLEnv, TextRLActor, train_agent_with_evaluation
@@ -135,14 +148,24 @@ train_agent_with_evaluation(
 print(actor.predict(observaton_list[0]))
 ```
 
-## Example 3
-Training on 176B BLOOM model using petals.   
 
-Strongly recommend joining swarm to increase petals capacity
+</p>
+</details>
+
+
+## Example 3 - 176B BLOOM
+
+Strongly recommend contribute on public swarm to increase petals capacity
 
 https://github.com/bigscience-workshop/petals
 
 install `pip install petals -U` first
+
+<details><summary>CLICK ME</summary>
+<p>
+
+#### bloomz-7b1-mt Example
+
 ```python
 import pfrl
 from textrl import TextRLEnv, TextRLActor, train_agent_with_evaluation
@@ -186,6 +209,9 @@ train_agent_with_evaluation(
 print(actor.predict(observaton_list[0]))
 ```
 
+</p>
+</details>
+
 
 
 ## Example 4
@@ -228,8 +254,6 @@ tokenizer = AutoTokenizer.from_pretrained(checkpoint)
 model = AutoModelForCausalLM.from_pretrained(checkpoint, torch_dtype="auto", device_map="auto")
 
 model = model.cuda()
-
-
 ```
 
 ### setup reward function for environment
