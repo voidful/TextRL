@@ -10,7 +10,6 @@ from torch import autocast
 
 
 class TextRLActor:
-    @autocast('cuda')
     def __init__(self, env, model, tokenizer, gpu_id=0, act_deterministically=True,
                  temperature=1.0,
                  top_k=0,
@@ -31,8 +30,7 @@ class TextRLActor:
         self.top_p = top_p
         self.repetition_penalty = repetition_penalty
 
-    @autocast('cuda')
-    def agent_ppo(self, update_interval=10, minibatch_size=3000, epochs=20, lr=5e-5):
+    def agent_ppo(self, update_interval=10, minibatch_size=3000, epochs=20, lr=3e-6):
         policy = torch.nn.Sequential(
             self.converter,
             SoftmaxCategoricalHead(self.env,
@@ -138,7 +136,6 @@ class SoftmaxCategoricalHead(torch.nn.Module):
         self.top_p = top_p
         self.repetition_penalty = repetition_penalty
 
-    @autocast('cuda')
     def forward(self, logits):
         # repetition penalty from CTRL paper (https://arxiv.org/abs/1909.05858)
         # repetition penalty from https://github.com/huggingface/transformers/pull/2303/files#diff-6b72b98c4c2dcfc6cc606843917733f5d858374fbc22a735ff483bbc0c1e63ea
@@ -157,7 +154,6 @@ class SoftmaxCategoricalHead(torch.nn.Module):
 
 
 class TextPPO(pfrl.agents.PPO):
-    @autocast('cuda')
     def _update_if_dataset_is_ready(self):
         dataset_size = (
                 sum(len(episode) for episode in self.memory)
@@ -215,7 +211,6 @@ class TextPPO(pfrl.agents.PPO):
         else:
             return float(1 - np.var(np.average(t) - y) / vart)
 
-    @autocast('cuda')
     def batch_act(self, batch_obs):
         if self.training:
             return self._batch_act_train(batch_obs)
@@ -239,7 +234,6 @@ class TextPPO(pfrl.agents.PPO):
 
         return action
 
-    @autocast('cuda')
     def _lossfun(
             self, entropy, vs_pred, log_probs, vs_pred_old, log_probs_old, advs, vs_teacher
     ):
@@ -273,5 +267,4 @@ class TextPPO(pfrl.agents.PPO):
                 + self.value_func_coef * loss_value_func
                 + self.entropy_coef * loss_entropy
         )
-        loss.requires_grad_(True)
         return loss
