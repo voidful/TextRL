@@ -12,7 +12,7 @@ from torch import autocast
 class TextRLActor:
     @autocast('cuda')
     def __init__(self, env, model, tokenizer, gpu_id=0, act_deterministically=True,
-                 temperature=0.6,
+                 temperature=1.0,
                  top_k=0,
                  top_p=1.0,
                  repetition_penalty=1.0):
@@ -28,7 +28,7 @@ class TextRLActor:
         self.act_deterministically = act_deterministically
         self.temperature = temperature
         self.top_k = top_k
-        self.tok_p = top_p
+        self.top_p = top_p
         self.repetition_penalty = repetition_penalty
 
     @autocast('cuda')
@@ -38,7 +38,7 @@ class TextRLActor:
             SoftmaxCategoricalHead(self.env,
                                    temperature=self.temperature,
                                    top_k=self.top_k,
-                                   top_p=self.tok_p,
+                                   top_p=self.top_p,
                                    repetition_penalty=self.repetition_penalty)
         )
         vf = torch.nn.Sequential(
@@ -56,7 +56,7 @@ class TextRLActor:
             epochs=epochs,
             clip_eps_vf=None,
             entropy_coef=0,
-            gamma=1,
+            gamma=0.95,  # https://arxiv.org/abs/2210.01241
             lambd=1,
             standardize_advantages=True,
             act_deterministically=self.act_deterministically
@@ -129,7 +129,7 @@ def top_k_top_p_filtering(
 
 
 class SoftmaxCategoricalHead(torch.nn.Module):
-    def __init__(self, env, temperature=0.6, top_k=0, top_p=1.0, repetition_penalty=1.0):
+    def __init__(self, env, temperature=1.0, top_k=0, top_p=1.0, repetition_penalty=1.0):
         super().__init__()
         self.env = env
         self.softmax = torch.nn.Softmax(dim=-1)
@@ -152,7 +152,7 @@ class SoftmaxCategoricalHead(torch.nn.Module):
                     else:
                         logits[:, seq_num, prev_token_id] /= self.repetition_penalty
         logits = logits / self.temperature
-        # logits = top_k_top_p_filtering(logits, top_k=self.top_k, top_p=self.top_p)
+        logits = top_k_top_p_filtering(logits, top_k=self.top_k, top_p=self.top_p)
         return torch.distributions.Categorical(logits=logits)
 
 
