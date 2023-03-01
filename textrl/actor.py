@@ -1,6 +1,6 @@
-import copy
 import itertools
 
+import numpy as np
 import pfrl
 import torch
 import torch.nn.functional as F
@@ -196,10 +196,24 @@ class TextPPO(pfrl.agents.PPO):
                 )
                 assert len(dataset) == dataset_size
                 self._update(dataset)
-            self.explained_variance = pfrl.agents.ppo._compute_explained_variance(
+            self.explained_variance = self._compute_explained_variance(
                 list(itertools.chain.from_iterable(self.memory))
             )
             self.memory = []
+
+    def _compute_explained_variance(self, transitions):
+        """Compute 1 - Var[return - v]/Var[return].
+
+        This function computes the fraction of variance that value predictions can
+        explain about returns.
+        """
+        t = np.array([tr["v_teacher"] for tr in transitions])
+        y = np.array([tr["v_pred"] for tr in transitions])
+        vart = np.var(t)
+        if vart == 0:
+            return np.nan
+        else:
+            return float(1 - np.var(np.average(t) - y) / vart)
 
     @autocast('cuda')
     def batch_act(self, batch_obs):
