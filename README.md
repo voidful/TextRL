@@ -219,6 +219,10 @@ print(actor.predict(observaton_list[0]))
 [Controllable generation via RL to let Elon Musk speak ill of DOGE
 ](https://github.com/voidful/TextRL/blob/main/example/2022-12-10-textrl-elon-musk.ipynb)
 
+colab example: [bigscience/bloom-560m](https://colab.research.google.com/drive/1ThSHtkfzC2dDc6JOdeCTthuDovTCheRf?usp=sharing)
+
+colab exmaple: [huggingtweets/elonmusk](https://colab.research.google.com/drive/149MG6uxu7CjMU1pXnYXfSvJ6HEdwcOFt?usp=sharing)
+
 before: `i think dogecoin is a great idea.`    
 after: `i think dogecoin is a great idea, but I think it is a little overused.`
 
