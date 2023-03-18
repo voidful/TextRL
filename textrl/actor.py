@@ -9,8 +9,29 @@ from pfrl.utils.mode_of_distribution import mode_of_distribution
 from torch import autocast
 
 
+def get_modulelist_pos(model):
+    module_list_pos = 0
+    for ids, i in enumerate(list(model.children())):
+        if isinstance(i, torch.nn.ModuleList):
+            module_list_pos = ids
+    return module_list_pos
+
+
+class HFModelListModule(torch.nn.Module):
+    def __init__(self, module_list):
+        super(HFModelListModule, self).__init__()
+        self.module_list = module_list
+
+    def forward(self, hidden):
+        for module in self.module_list:
+            hidden = module(hidden)[0]
+        return hidden
+
+
 class TextRLActor:
-    def __init__(self, env, model, tokenizer, gpu_id=0, act_deterministically=True,
+    def __init__(self, env, model, tokenizer, gpu_id=0,
+                 unfreeze_layer_from_past=0,
+                 act_deterministically=True,
                  temperature=1.0,
                  top_k=0,
                  top_p=1.0,
@@ -23,15 +44,37 @@ class TextRLActor:
         self.model = model
         self.obs_size = model.config.hidden_size
         self.converter = self.model.lm_head
-        # self.original_weight = copy.deepcopy(self.model.lm_head.weight)
         self.act_deterministically = act_deterministically
         self.temperature = temperature
         self.top_k = top_k
         self.top_p = top_p
         self.repetition_penalty = repetition_penalty
+        self.unfreeze_layer_from_past = unfreeze_layer_from_past
+
+        parents = [parent[0] for parent in model.named_children()]
+        if 'transformer' in parents:  # gpt2/bloom:
+            transformers_model = model.transformer
+        elif 'model' in parents:  # bart
+            transformers_model = model.model
+        elif 'encoder' in parents:  # t5
+            transformers_model = model.encoder
+        else:
+            raise ValueError('model not supported')
+
+        if unfreeze_layer_from_past > 0:
+            self.middle_model = HFModelListModule(list(transformers_model.children())
+                                                  [get_modulelist_pos(transformers_model)]
+                                                  [-self.unfreeze_layer_from_past:])
+            self.remaining_model = torch.nn.Sequential(
+                *list(transformers_model.children())[get_modulelist_pos(transformers_model) + 1:])
+        else:
+            self.middle_model = torch.nn.Sequential()
+            self.remaining_model = torch.nn.Sequential()
 
     def agent_ppo(self, update_interval=10, minibatch_size=3000, epochs=20, lr=3e-6):
         policy = torch.nn.Sequential(
+            self.middle_model,
+            self.remaining_model,
             self.converter,
             SoftmaxCategoricalHead(self.env,
                                    temperature=self.temperature,

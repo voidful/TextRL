@@ -8,8 +8,14 @@ from torch import autocast
 
 
 class TextRLEnv(gym.Env):
-    def __init__(self, model, tokenizer, observation_input=[], max_length=100, compare_sample=2):
-        vocabs = list(dict(sorted(tokenizer.vocab.items(), key=lambda item: item[1])).keys())
+    def __init__(self, model, tokenizer, observation_input=[], max_length=100, compare_sample=2,
+                 unfreeze_layer_from_past=0):
+        try:
+            tokvocab = tokenizer.get_vocab()
+        except:
+            tokvocab = tokenizer.vocab
+            pass
+        vocabs = list(dict(sorted(tokvocab.items(), key=lambda item: item[1])).keys())
         self.action_space = gym.spaces.Discrete(len(vocabs))
         self.actions = vocabs
         self.model = model
@@ -17,7 +23,7 @@ class TextRLEnv(gym.Env):
         self.observation_space = observation_input
         self.compare_sample = compare_sample
         self.target_table = {}
-
+        self.unfreeze_layer_from_past = 1 if unfreeze_layer_from_past == 0 else unfreeze_layer_from_past
         self.env_max_length = min(max(self.model.config.max_length, self.tokenizer.model_max_length), max_length)
         self.reset()
 
@@ -73,7 +79,7 @@ class TextRLEnv(gym.Env):
                             [[self.model.config.decoder_start_token_id]]).to(self.model.device)
                     with torch.cuda.amp.autocast(enabled=False):
                         prediction = self.model(**feature_dict, output_hidden_states=True)
-                    outputs = prediction.decoder_hidden_states[-1].squeeze(0)
+                    outputs = prediction.decoder_hidden_states[-self.unfreeze_layer_from_past].squeeze(0)
                 else:
                     if self.model.__class__.__name__ == 'DistributedBloomForCausalLM':
                         with self.model.inference_session(max_length=self.env_max_length) as sess:
@@ -89,9 +95,9 @@ class TextRLEnv(gym.Env):
                                                       return_tensors='pt',
                                                       add_special_tokens=False).to(self.model.device)
                         prediction = self.model(**feature_dict, output_hidden_states=True)
-                        outputs = prediction.hidden_states[-1].squeeze(0)
+                        outputs = prediction.hidden_states[-self.unfreeze_layer_from_past].squeeze(0)
                 obs_list.append(outputs.data[-1])
-            return torch.stack(obs_list)
+            return (torch.stack(obs_list))
 
     def _predict(self, vocab_id):
         predicted_list = {}
