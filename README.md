@@ -1,5 +1,23 @@
 # TextRL
 
+<p>
+    <a href="https://pypi.org/project/textrl/">
+        <img alt="PyPI" src="https://img.shields.io/pypi/v/textrl">
+    </a>
+    <a href="https://github.com/voidful/tfkit">
+        <img alt="Download" src="https://img.shields.io/pypi/dm/textrl">
+    </a>
+    <a href="https://github.com/voidful/tfkit">
+        <img alt="Last Commit" src="https://img.shields.io/github/last-commit/voidful/textrl">
+    </a>
+    <a href="https://www.codefactor.io/repository/github/voidful/textrl">
+        <img src="https://www.codefactor.io/repository/github/voidful/textrl/badge" alt="CodeFactor" />
+    </a>
+    <a href="https://github.com/voidful/textrl">
+        <img src="https://visitor-badge.glitch.me/badge?page_id=voidful.textrl" alt="Visitor" />
+    </a>
+</p>
+
 Text generation with reinforcement learning using huggingface's transformer.  
 RLHF (Reinforcement Learning with Human Feedback)
 Implementation of ChatGPT for human interaction to improve generation model with reinforcement learning.
@@ -13,26 +31,32 @@ text-generation model on huggingaface's [transformer](https://github.com/hugging
 with [PFRL](https://github.com/pfnet/pfrl) and [OpenAI GYM](https://gym.openai.com).
 
 ## Key parameter for RL training
+
 To finetune language model using RL, you basically need to modify the reward function:
+
 ```python
 from textrl import TextRLEnv
+
+
 class MyRLEnv(TextRLEnv):
     def get_reward(self, input_item, predicted_list, finish):
         # input_item is the prompt input for the model, it will be one of your observation
         # an observation will be a list of sentence of eg: ['inputted sentence','xxx','yyy']
         # only the first input will feed to the model 'inputted sentence', and 
         # the remaining can be the reference for reward calculation
-        
+
         # predicted_list is the list of predicted sentences of RL model generated,
         # it will be used for ranking reward calculation
-        
+
         # finish is the end of sentences flags, get_reward will be called during generating each word, and 
         # when finish is True, it means the sentence is finished, it will use for sentence level reward calculation.
-        
+
         # reward should be the list equal to the length of predicted_list
-      return reward
+        return reward
 ```
+
 parameters for sampling diverse example:
+
 ```python 
 actor = TextRLActor(env, model, tokenizer,
                     act_deterministically=False,  # select the max probability token for each step or not
@@ -62,15 +86,17 @@ model = AutoModelForCausalLM.from_pretrained(checkpoint, torch_dtype="auto", dev
 
 model = model.cuda()
 
+
 class MyRLEnv(TextRLEnv):
     def get_reward(self, input_item, predicted_list, finish):  # predicted will be the list of predicted token
         reward = [0]
         if finish:
-            reward = [1] # calculate reward score base on predicted_list
+            reward = [1]  # calculate reward score base on predicted_list
         return reward
 
+
 observaton_list = [["explain how attention work in seq2seq model"]]
-env = TextRLEnv(model, tokenizer, observation_input=observaton_list,max_length=20, compare_sample=2)
+env = TextRLEnv(model, tokenizer, observation_input=observaton_list, max_length=20, compare_sample=2)
 actor = TextRLActor(env, model, tokenizer,
                     act_deterministically=False,
                     temperature=1.0,
@@ -85,18 +111,16 @@ train_agent_with_evaluation(
     env,
     steps=100,
     eval_n_steps=None,
-    eval_n_episodes=1,       
+    eval_n_episodes=1,
     eval_interval=2,
-    outdir='bloom—test', 
+    outdir='bloom—test',
 )
 
 print(actor.predict(observaton_list[0]))
 ```
 
-
 </p>
 </details>
-
 
 ## Example 2 - `bigscience/bloomz-7b1-mt`
 
@@ -117,15 +141,17 @@ model = AutoModelForCausalLM.from_pretrained(checkpoint, torch_dtype="auto", dev
 
 model = model.cuda()
 
+
 class MyRLEnv(TextRLEnv):
     def get_reward(self, input_item, predicted_list, finish):  # predicted will be the list of predicted token
         reward = [0]
         if finish:
-            reward = [1] # calculate reward score base on predicted_list
+            reward = [1]  # calculate reward score base on predicted_list
         return reward
 
+
 observaton_list = [["explain how attention work in seq2seq model"]]
-env = TextRLEnv(model, tokenizer, observation_input=observaton_list,max_length=20, compare_sample=2)
+env = TextRLEnv(model, tokenizer, observation_input=observaton_list, max_length=20, compare_sample=2)
 actor = TextRLActor(env, model, tokenizer,
                     act_deterministically=False,
                     temperature=1.0,
@@ -140,18 +166,16 @@ train_agent_with_evaluation(
     env,
     steps=100,
     eval_n_steps=None,
-    eval_n_episodes=1,       
+    eval_n_episodes=1,
     eval_interval=2,
-    outdir='bloom—test', 
+    outdir='bloom—test',
 )
 
 print(actor.predict(observaton_list[0]))
 ```
 
-
 </p>
 </details>
-
 
 ## Example 3 - 176B BLOOM
 
@@ -169,7 +193,7 @@ install `pip install petals -U` first
 ```python
 import pfrl
 from textrl import TextRLEnv, TextRLActor, train_agent_with_evaluation
-from transformers import BloomTokenizerFast 
+from transformers import BloomTokenizerFast
 from petals import DistributedBloomForCausalLM
 
 MODEL_NAME = "bigscience/bloom-petals"
@@ -177,15 +201,17 @@ tokenizer = BloomTokenizerFast.from_pretrained(MODEL_NAME)
 model = DistributedBloomForCausalLM.from_pretrained(MODEL_NAME)
 model = model.cuda()
 
+
 class MyRLEnv(TextRLEnv):
     def get_reward(self, input_item, predicted_list, finish):  # predicted will be the list of predicted token
         reward = [0]
         if finish:
-            reward = [1] # calculate reward score base on predicted_list
+            reward = [1]  # calculate reward score base on predicted_list
         return reward
 
+
 observaton_list = [["explain how attention work in seq2seq model"]]
-env = TextRLEnv(model, tokenizer, observation_input=observaton_list,max_length=20, compare_sample=2)
+env = TextRLEnv(model, tokenizer, observation_input=observaton_list, max_length=20, compare_sample=2)
 actor = TextRLActor(env, model, tokenizer,
                     act_deterministically=False,
                     temperature=1.0,
@@ -201,9 +227,9 @@ train_agent_with_evaluation(
     env,
     steps=100,
     eval_n_steps=None,
-    eval_n_episodes=1,       
+    eval_n_episodes=1,
     eval_interval=2,
-    outdir='bloom—test', 
+    outdir='bloom—test',
 )
 
 print(actor.predict(observaton_list[0]))
@@ -212,16 +238,16 @@ print(actor.predict(observaton_list[0]))
 </p>
 </details>
 
-
-
 ## Example 4
 
 [Controllable generation via RL to let Elon Musk speak ill of DOGE
 ](https://github.com/voidful/TextRL/blob/main/example/2022-12-10-textrl-elon-musk.ipynb)
 
-colab example: [bigscience/bloom-560m](https://colab.research.google.com/drive/1ThSHtkfzC2dDc6JOdeCTthuDovTCheRf?usp=sharing)
+colab
+example: [bigscience/bloom-560m](https://colab.research.google.com/drive/1ThSHtkfzC2dDc6JOdeCTthuDovTCheRf?usp=sharing)
 
-colab exmaple: [huggingtweets/elonmusk](https://colab.research.google.com/drive/149MG6uxu7CjMU1pXnYXfSvJ6HEdwcOFt?usp=sharing)
+colab
+exmaple: [huggingtweets/elonmusk](https://colab.research.google.com/drive/149MG6uxu7CjMU1pXnYXfSvJ6HEdwcOFt?usp=sharing)
 
 before: `i think dogecoin is a great idea.`    
 after: `i think dogecoin is a great idea, but I think it is a little overused.`
@@ -269,14 +295,14 @@ model = model.cuda()
 class MyRLEnv(TextRLEnv):
     def get_reward(self, input_item, predicted_list, finish):  # predicted will be the list of predicted token
         if finish:
-            reward = [0] # calculate reward score base on predicted_list
+            reward = [0]  # calculate reward score base on predicted_list
         return reward
 ```
 
 ### prepare for training
 
 * observaton_list should be a list of all possible input string for model training
-  
+
   eg: `observaton_list = [['testing sent 1'],['testing sent 2']]`
 
 ```python
