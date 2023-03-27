@@ -83,7 +83,9 @@ class TextRLActor:
                                    repetition_penalty=self.repetition_penalty)
         )
         vf = torch.nn.Sequential(
-            torch.nn.Linear(self.obs_size, 1),
+            torch.nn.Linear(self.obs_size, self.obs_size//2),
+            torch.nn.Linear(self.obs_size//2, self.obs_size//4),
+            torch.nn.Linear(self.obs_size//4, 1)
         )
         model = pfrl.nn.Branched(policy, vf)
         opt = torch.optim.SGD(model.parameters(), lr=lr)

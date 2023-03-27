@@ -95,7 +95,7 @@ class MyRLEnv(TextRLEnv):
         return reward
 
 
-observaton_list = [["explain how attention work in seq2seq model"]]
+observaton_list = [{"input":"explain how attention work in seq2seq model"}]
 env = TextRLEnv(model, tokenizer, observation_input=observaton_list, max_length=20, compare_sample=2)
 actor = TextRLActor(env, model, tokenizer,
                     act_deterministically=False,
@@ -150,7 +150,7 @@ class MyRLEnv(TextRLEnv):
         return reward
 
 
-observaton_list = [["explain how attention work in seq2seq model"]]
+observaton_list = [{"input":"explain how attention work in seq2seq model"}]
 env = TextRLEnv(model, tokenizer, observation_input=observaton_list, max_length=20, compare_sample=2)
 actor = TextRLActor(env, model, tokenizer,
                     act_deterministically=False,
@@ -210,7 +210,7 @@ class MyRLEnv(TextRLEnv):
         return reward
 
 
-observaton_list = [["explain how attention work in seq2seq model"]]
+observaton_list = [{"input":"explain how attention work in seq2seq model"}]
 env = TextRLEnv(model, tokenizer, observation_input=observaton_list, max_length=20, compare_sample=2)
 actor = TextRLActor(env, model, tokenizer,
                     act_deterministically=False,
@@ -303,7 +303,7 @@ class MyRLEnv(TextRLEnv):
 
 * observaton_list should be a list of all possible input string for model training
 
-  eg: `observaton_list = [['testing sent 1'],['testing sent 2']]`
+  eg: `observaton_list = [{"input":'testing sent 1'},{"input":'testing sent 2'}]`
 
 ```python
 env = MyRLEnv(model, tokenizer, observation_input=observaton_list)

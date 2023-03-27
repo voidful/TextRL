@@ -46,13 +46,13 @@ class TextRLEnv(gym.Env):
         return reward
 
     def gat_obs_input(self, input_item):
-        return input_item[0]
+        return input_item['input']
 
     @autocast('cuda')
     def reset(self, input_item=None):
         self.predicted = [[]] * self.compare_sample
         self.predicted_end = [False] * self.compare_sample
-        self.input_item = [""]
+        self.input_item = {"input": ""}
         if input_item is None:
             self.input_item = random.choice(self.observation_space)
         else:
