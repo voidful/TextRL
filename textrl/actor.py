@@ -29,7 +29,7 @@ class HFModelListModule(torch.nn.Module):
 
 
 class TextRLActor:
-    def __init__(self, env, model, tokenizer, gpu_id=0,
+    def __init__(self, env, model, tokenizer, optimizer='sgd', gpu_id=0,
                  unfreeze_layer_from_past=0,
                  act_deterministically=True,
                  temperature=1.0,
@@ -48,6 +48,7 @@ class TextRLActor:
         self.temperature = temperature
         self.top_k = top_k
         self.top_p = top_p
+        self.optimizer = optimizer
         self.repetition_penalty = repetition_penalty
         self.unfreeze_layer_from_past = unfreeze_layer_from_past
 
@@ -56,8 +57,8 @@ class TextRLActor:
             transformers_model = model.transformer
         elif 'model' in parents:  # bart
             transformers_model = model.model
-        elif 'encoder' in parents:  # t5
-            transformers_model = model.encoder
+        elif 'decoder' in parents:  # t5
+            transformers_model = model.decoder
         else:
             raise ValueError('model not supported')
 
@@ -83,12 +84,18 @@ class TextRLActor:
                                    repetition_penalty=self.repetition_penalty)
         )
         vf = torch.nn.Sequential(
-            torch.nn.Linear(self.obs_size, self.obs_size//2),
-            torch.nn.Linear(self.obs_size//2, self.obs_size//4),
-            torch.nn.Linear(self.obs_size//4, 1)
+            torch.nn.Linear(self.obs_size, self.obs_size // 2),
+            torch.nn.Linear(self.obs_size // 2, self.obs_size // 4),
+            torch.nn.Linear(self.obs_size // 4, 1)
         )
         model = pfrl.nn.Branched(policy, vf)
-        opt = torch.optim.SGD(model.parameters(), lr=lr)
+        if isinstance(self.optimizer, str):
+            if self.optimizer.lower() == 'adamw':
+                opt = torch.optim.AdamW(model.parameters(), lr=lr)
+            else:
+                opt = torch.optim.SGD(model.parameters(), lr=lr)
+        else:
+            opt = self.optimizer
         model = model.cuda()
         agent = TextPPO(
             model,
@@ -290,7 +297,7 @@ class TextPPO(pfrl.agents.PPO):
             ),
         )
         if self.clip_eps_vf is None:
-            loss_value_func = F.mse_loss(vs_pred, vs_teacher)
+            loss_value_func = F.mse_loss(vs_pred.squeeze(), vs_teacher.squeeze())
         else:
             clipped_vs_pred = _elementwise_clip(
                 vs_pred,
@@ -299,8 +306,8 @@ class TextPPO(pfrl.agents.PPO):
             )
             loss_value_func = torch.mean(
                 torch.max(
-                    F.mse_loss(vs_pred, vs_teacher, reduction="none"),
-                    F.mse_loss(clipped_vs_pred, vs_teacher, reduction="none"),
+                    F.mse_loss(vs_pred.squeeze(), vs_teacher, reduction="none"),
+                    F.mse_loss(clipped_vs_pred.squeeze(), vs_teacher, reduction="none"),
                 )
             )
         loss_entropy = -torch.mean(entropy)
