@@ -67,7 +67,7 @@ actor = TextRLActor(env, model, tokenizer,
                     repetition_penalty=2)         # repetition penalty from CTRL paper (https://arxiv.org/abs/1909.05858)
 ```
 
-## Example 1 - `gpt2`
+## Example - `gpt2`
 
 <details><summary>CLICK ME</summary>
 <p>
@@ -122,7 +122,66 @@ print(actor.predict(observaton_list[0]))
 </p>
 </details>
 
-## Example 2 - `bigscience/bloomz-7b1-mt`
+## Example - `flan-t5`
+
+colab
+example: [google/flan-t5-base](https://colab.research.google.com/drive/1DYHt0mi6cyl8ZTMJEkMNpsSZCCvR4jM1?usp=sharing)
+
+<details><summary>CLICK ME</summary>
+<p>
+
+#### Example Code
+
+```python
+import pfrl
+from textrl import TextRLEnv, TextRLActor, train_agent_with_evaluation
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+
+tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-base")  
+model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-base")
+model.eval()
+model.cuda()
+
+sentiment = pipeline('sentiment-analysis',model="cardiffnlp/twitter-roberta-base-sentiment",tokenizer="cardiffnlp/twitter-roberta-base-sentiment",device=0,return_all_scores=True)
+
+class MyRLEnv(TextRLEnv):
+    def get_reward(self, input_item, predicted_list, finish): # predicted will be the list of predicted token
+      reward = 0
+      if finish or len(predicted_list[0]) >= self.env_max_length:
+        predicted_text = tokenizer.convert_tokens_to_string(predicted_list[0])
+        # sentiment classifier
+        reward = sentiment(input_item['input']+predicted_text)[0][0]['score'] * 10
+      return reward
+
+observaton_list = [{'input':'i think dogecoin is'}]
+env = MyRLEnv(model, tokenizer, observation_input=observaton_list, compare_sample=1)
+actor = TextRLActor(env,model,tokenizer,optimizer='adamw',
+                    temperature=0.8,
+                    top_k=100,
+                    top_p=0.85,)
+agent = actor.agent_ppo(update_interval=50, minibatch_size=3, epochs=10,lr=3e-4)
+print(actor.predict(observaton_list[0]))
+
+pfrl.experiments.train_agent_with_evaluation(
+    agent,
+    env,
+    steps=3000,
+    eval_n_steps=None,
+    eval_n_episodes=1,       
+    train_max_episode_len=100,  
+    eval_interval=10,
+    outdir='checkpoint', 
+)
+agent.load("./checkpoint/best")
+print(actor.predict(observaton_list[0]))
+```
+
+</p>
+</details>
+
+
+## Example - `bigscience/bloomz-7b1-mt`
 
 <details><summary>CLICK ME</summary>
 <p>
@@ -177,7 +236,7 @@ print(actor.predict(observaton_list[0]))
 </p>
 </details>
 
-## Example 3 - 176B BLOOM
+## Example - 176B BLOOM
 
 Strongly recommend contribute on public swarm to increase petals capacity
 
@@ -188,7 +247,7 @@ install `pip install petals -U` first
 <details><summary>CLICK ME</summary>
 <p>
 
-#### bloomz-7b1-mt Example
+#### bloomz-176B Example
 
 ```python
 import pfrl
@@ -238,7 +297,7 @@ print(actor.predict(observaton_list[0]))
 </p>
 </details>
 
-## Example 4
+## Example - Controllable generation via RL to let Elon Musk speak ill of DOGE
 
 [Controllable generation via RL to let Elon Musk speak ill of DOGE
 ](https://github.com/voidful/TextRL/blob/main/example/2022-12-10-textrl-elon-musk.ipynb)
@@ -251,6 +310,7 @@ exmaple: [huggingtweets/elonmusk](https://colab.research.google.com/drive/149MG6
 
 before: `i think dogecoin is a great idea.`    
 after: `i think dogecoin is a great idea, but I think it is a little overused.`
+
 
 ## Installation
 
