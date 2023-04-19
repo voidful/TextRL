@@ -1,6 +1,6 @@
-# TextRL
+# TextRL: Text Generation with Reinforcement Learning
 
-<p>
+<p align="center">
     <a href="https://pypi.org/project/textrl/">
         <img alt="PyPI" src="https://img.shields.io/pypi/v/textrl">
     </a>
@@ -18,54 +18,39 @@
     </a>
 </p>
 
-Text generation with reinforcement learning using huggingface's transformer.  
-RLHF (Reinforcement Learning with Human Feedback)
-Implementation of ChatGPT for human interaction to improve generation model with reinforcement learning.
+TextRL is a Python library that aims to improve text generation using reinforcement learning, building upon Hugging Face's Transformers, PFRL, and OpenAI GYM. TextRL is designed to be easily customizable and can be applied to various text-generation models.
 
 ![TextRL](https://github.com/voidful/TextRL/raw/main/img/Designer.png)
 
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Examples](#examples)
+  - [GPT-2 Example](#gpt-2-example)
+  - [FLAN-T5 Example](#flan-t5-example)
+  - [Bigscience/BLOOMZ-7B1-MT Example](#bigsciencebloomz-7b1-mt-example)
+  - [176B BLOOM Example](#176b-bloom-example)
+  - [Controllable Generation via RL Example](#controllable-generation-via-rl-example)
+- [Installation](#installation)
+  - [Pip Install](#pip-install)
+  - [Build from Source](#build-from-source)
+- [Usage](#usage)
+  - [Initialize Agent and Environment](#initialize-agent-and-environment)
+  - [Setup Reward Function for Environment](#setup-reward-function-for-environment)
+  - [Prepare for Training](#prepare-for-training)
+  - [Training](#training)
+- [Dump Model](#dump-trained-model-to-huggingfaces-model)
+- [Key Parameters for RL Training](#key-parameters-for-rl-training)
+
 ## Introduction
 
-This project is trying to use reinforcement learning to adjust text generation results. It is based on any
-text-generation model on huggingaface's [transformer](https://github.com/huggingface/transformers)
-with [PFRL](https://github.com/pfnet/pfrl) and [OpenAI GYM](https://gym.openai.com).
+TextRL utilizes reinforcement learning to fine-tune text generation models. It is built upon the following libraries:
 
-## Key parameter for RL training
-
-To finetune language model using RL, you basically need to modify the reward function:
-
-```python
-from textrl import TextRLEnv
+- [Hugging Face's Transformers](https://github.com/huggingface/transformers)
+- [PFRL](https://github.com/pfnet/pfrl)
+- [OpenAI GYM](https://gym.openai.com)
 
 
-class MyRLEnv(TextRLEnv):
-    def get_reward(self, input_item, predicted_list, finish):
-        # input_item is the prompt input for the model, it will be one of your observation
-        # an observation will be a list of sentence of eg: ['inputted sentence','xxx','yyy']
-        # only the first input will feed to the model 'inputted sentence', and 
-        # the remaining can be the reference for reward calculation
-
-        # predicted_list is the list of predicted sentences of RL model generated,
-        # it will be used for ranking reward calculation
-
-        # finish is the end of sentences flags, get_reward will be called during generating each word, and 
-        # when finish is True, it means the sentence is finished, it will use for sentence level reward calculation.
-
-        # reward should be the list equal to the length of predicted_list
-        return reward
-```
-
-parameters for sampling diverse example:
-
-```python 
-actor = TextRLActor(env, model, tokenizer,
-                    act_deterministically=False,  # select the max probability token for each step or not
-                    temperature=1,                # temperature for sampling
-                    compare_sample=2,             # num of sample to rank
-                    top_k=0,                      # top k sampling
-                    top_p=1.0,                    # top p sampling
-                    repetition_penalty=2)         # repetition penalty from CTRL paper (https://arxiv.org/abs/1909.05858)
-```
 
 ## Example - `gpt2`
 
@@ -124,13 +109,14 @@ print(actor.predict(observaton_list[0]))
 
 ## Example - `flan-t5`
 
-colab
-example: [google/flan-t5-base](https://colab.research.google.com/drive/1DYHt0mi6cyl8ZTMJEkMNpsSZCCvR4jM1?usp=sharing)
 
 <details><summary>CLICK ME</summary>
 <p>
 
 #### Example Code
+
+colab
+example: [google/flan-t5-base](https://colab.research.google.com/drive/1DYHt0mi6cyl8ZTMJEkMNpsSZCCvR4jM1?usp=sharing)
 
 ```python
 import pfrl
@@ -238,16 +224,17 @@ print(actor.predict(observaton_list[0]))
 
 ## Example - 176B BLOOM
 
+<details><summary>CLICK ME</summary>
+<p>
+
+#### bloomz-176B Example
+
 Strongly recommend contribute on public swarm to increase petals capacity
 
 https://github.com/bigscience-workshop/petals
 
 install `pip install petals -U` first
 
-<details><summary>CLICK ME</summary>
-<p>
-
-#### bloomz-176B Example
 
 ```python
 import pfrl
@@ -299,6 +286,8 @@ print(actor.predict(observaton_list[0]))
 
 ## Example - Controllable generation via RL to let Elon Musk speak ill of DOGE
 
+<details><summary>CLICK ME</summary>
+<p>
 [Controllable generation via RL to let Elon Musk speak ill of DOGE
 ](https://github.com/voidful/TextRL/blob/main/example/2022-12-10-textrl-elon-musk.ipynb)
 
@@ -310,7 +299,8 @@ exmaple: [huggingtweets/elonmusk](https://colab.research.google.com/drive/149MG6
 
 before: `i think dogecoin is a great idea.`    
 after: `i think dogecoin is a great idea, but I think it is a little overused.`
-
+</p>
+</details>
 
 ## Installation
 
@@ -331,7 +321,7 @@ pip install -e .
 
 ## Usage
 
-### init agent and environment
+### Initialize agent and environment
 
 ```python
 import torch
@@ -346,27 +336,27 @@ model = AutoModelForCausalLM.from_pretrained(checkpoint, torch_dtype="auto", dev
 model = model.cuda()
 ```
 
-### setup reward function for environment
+### Set up reward function for environment
 
-* predicted(list[str]): will be the list of predicted token
-* finish(bool): it met the end of sentence or not
+- predicted(list\[str]): will be the list of predicted tokens
+- finish(bool): whether the end of sentence has been reached or not
 
 ```python
 class MyRLEnv(TextRLEnv):
-    def get_reward(self, input_item, predicted_list, finish):  # predicted will be the list of predicted token
+    def get_reward(self, input_item, predicted_list, finish):
         if finish:
-            reward = [0]  # calculate reward score base on predicted_list
+            reward = [0]  # calculate reward score based on predicted_list
         return reward
 ```
 
-### prepare for training
+### Prepare for training
 
-* observaton_list should be a list of all possible input string for model training
+- observation\_list should be a list of all possible input strings for model training
 
-  eg: `observaton_list = [{"input":'testing sent 1'},{"input":'testing sent 2'}]`
+  Example: `observation_list = [{"input":'testing sent 1'},{"input":'testing sent 2'}]`
 
 ```python
-env = MyRLEnv(model, tokenizer, observation_input=observaton_list)
+env = MyRLEnv(model, tokenizer, observation_input=observation_list)
 actor = TextRLActor(env, model, tokenizer)
 agent = actor.agent_ppo(update_interval=10, minibatch_size=2000, epochs=20)
 ```
@@ -397,7 +387,7 @@ for i in range(1, n_episodes + 1):
 print('Finished.')
 ```
 
-another way to train
+Another way to train:
 
 ```python
 import logging
@@ -417,15 +407,117 @@ train_agent_with_evaluation(
 )
 ```
 
-### prediction
+### Prediction
 
 ```python
 agent.load("somewhere/best")  # loading the best model
 actor.predict("input text")
 ```
 
-## dump trained model to huggingface's model
+This updated usage section provides a comprehensive guide on how to initialize the agent and environment, set up the reward function for the environment, prepare for training, train the model, and make predictions. It also includes an alternative way to train the model using the `train_agent_with_evaluation` function.
+
+## Dump trained model to huggingface's model
 
 ```shell
 textrl-dump --model ./model_path_before_rl --rl ./rl_path --dump ./output_dir
 ```
+
+## Key Parameters for RL Training
+
+To finetune a language model using RL, you need to modify the reward function:
+
+```python
+from textrl import TextRLEnv
+
+class MyRLEnv(TextRLEnv):
+    def get_reward(self, input_item, predicted_list, finish):
+        # input_item is the prompt input for the model, it will be one of your observation
+        # an observation will be a list of sentence of eg: ['inputted sentence','xxx','yyy']
+        # only the first input will feed to the model 'inputted sentence', and 
+        # the remaining can be the reference for reward calculation
+
+        # predicted_list is the list of predicted sentences of RL model generated,
+        # it will be used for ranking reward calculation
+
+        # finish is the end of sentences flags, get_reward will be called during generating each word, and 
+        # when finish is True, it means the sentence is finished, it will use for sentence level reward calculation.
+
+        # reward should be the list equal to the length of predicted_list
+        return reward
+```
+
+Parameters for sampling diverse examples:
+
+```python
+actor = TextRLActor(env, model, tokenizer,
+                    act_deterministically=False,  # select the max probability token for each step or not
+                    temperature=1,                # temperature for sampling
+                    compare_sample=2,             # num of sample to rank
+                    top_k=0,                      # top k sampling
+                    top_p=1.0,                    # top p sampling
+                    repetition_penalty=2)         # repetition penalty from CTRL paper (https://arxiv.org/abs/1909.05858)
+```
+
+When training a reinforcement learning (RL) model, several key parameters need to be tuned to ensure optimal performance. Here is a list of important parameters and their descriptions:
+
+1. **Update Interval**: This determines how often the RL agent updates its policy based on collected experiences. A smaller update interval means the agent learns more frequently from recent experiences, while a larger interval allows more experiences to accumulate before learning. In the example above, the update interval is set to 10.
+
+```python
+update_interval=10
+```
+
+2. **Minibatch Size**: The number of experiences sampled from the experience replay buffer to compute the gradient update. A larger minibatch size helps to stabilize learning and reduce variance, but at the cost of increased computational requirements.
+
+```python
+minibatch_size=2000
+```
+
+3. **Epochs**: The number of times the agent iterates through the entire minibatch to update its policy. More epochs can lead to better learning but may increase the risk of overfitting.
+
+```python
+epochs=20
+```
+
+4. **Discount Factor (Gamma)**: This parameter determines how much future rewards are discounted when calculating the expected return. A value closer to 1 makes the agent more farsighted, while a value closer to 0 makes the agent more focused on immediate rewards.
+
+```python
+gamma=0.99
+```
+
+5. **Learning Rate**: The step size used for updating the policy. A larger learning rate allows for faster convergence but may lead to instability in learning, while a smaller learning rate ensures stable learning at the cost of slower convergence.
+
+```python
+lr=1e-4
+```
+
+6. **Epsilon**: A parameter used in the PPO algorithm to clip the policy ratio. This helps to control the magnitude of policy updates, preventing excessively large updates that can destabilize learning.
+
+```python
+epsilon=0.2
+```
+
+7. **Entropy Coefficient**: This parameter encourages exploration by adding a bonus reward for taking less certain actions. A higher entropy coefficient promotes more exploration, while a lower coefficient focuses the agent on exploiting known strategies.
+
+```python
+entropy_coef=0.01
+```
+
+8. **Training Steps**: The total number of steps the agent takes during training. More steps typically lead to better learning but may require more computational time.
+
+```python
+steps=1000
+```
+
+9. **Evaluation Interval**: The number of training steps between evaluations. Increasing the evaluation interval reduces the computational time spent on evaluation, but it may also reduce the frequency at which you can monitor the agent's progress.
+
+```python
+eval_interval=10000
+```
+
+10. **Max Episode Length**: The maximum number of steps allowed in a single episode during training. This can prevent the agent from getting stuck in long, unproductive episodes.
+
+```python
+train_max_episode_len=50
+```
+
+These parameters need to be carefully tuned based on the specific problem and environment to achieve the best performance. It is generally recommended to start with default values and then adjust them based on the observed learning behavior.
