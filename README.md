@@ -22,7 +22,7 @@ Text generation with reinforcement learning using huggingface's transformer.
 RLHF (Reinforcement Learning with Human Feedback)
 Implementation of ChatGPT for human interaction to improve generation model with reinforcement learning.
 
-![example](https://i.imgur.com/pqJn9lJ.png)
+![TextRL](https://github.com/voidful/TextRL/raw/main/img/Designer.png)
 
 ## Introduction
 
