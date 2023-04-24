@@ -63,6 +63,10 @@ TextRL utilizes reinforcement learning to fine-tune text generation models. It i
 import pfrl
 from textrl import TextRLEnv, TextRLActor, train_agent_with_evaluation
 from transformers import AutoModelForCausalLM, AutoTokenizer
+import logging
+import sys
+
+logging.basicConfig(level=logging.INFO, stream=sys.stdout, format='')
 
 checkpoint = "gpt2"
 
@@ -85,7 +89,7 @@ env = TextRLEnv(model, tokenizer, observation_input=observaton_list, max_length=
 actor = TextRLActor(env, model, tokenizer,
                     act_deterministically=False,
                     temperature=1.0,
-                    top_k=10,
+                    top_k=0,
                     top_p=1.0,
                     repetition_penalty=2)
 agent = actor.agent_ppo(update_interval=2, minibatch_size=2, epochs=10)
@@ -122,6 +126,10 @@ example: [google/flan-t5-base](https://colab.research.google.com/drive/1DYHt0mi6
 import pfrl
 from textrl import TextRLEnv, TextRLActor, train_agent_with_evaluation
 from transformers import AutoModelForCausalLM, AutoTokenizer
+import logging
+import sys
+
+logging.basicConfig(level=logging.INFO, stream=sys.stdout, format='')
 
 
 tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-base")  
@@ -178,6 +186,10 @@ print(actor.predict(observaton_list[0]))
 import pfrl
 from textrl import TextRLEnv, TextRLActor, train_agent_with_evaluation
 from transformers import AutoModelForCausalLM, AutoTokenizer
+import logging
+import sys
+
+logging.basicConfig(level=logging.INFO, stream=sys.stdout, format='')
 
 checkpoint = "bigscience/bloomz-7b1-mt"
 
@@ -200,7 +212,7 @@ env = TextRLEnv(model, tokenizer, observation_input=observaton_list, max_length=
 actor = TextRLActor(env, model, tokenizer,
                     act_deterministically=False,
                     temperature=1.0,
-                    top_k=10,
+                    top_k=0,
                     top_p=1.0,
                     repetition_penalty=2)
 agent = actor.agent_ppo(update_interval=2, minibatch_size=2, epochs=10)
@@ -241,6 +253,10 @@ import pfrl
 from textrl import TextRLEnv, TextRLActor, train_agent_with_evaluation
 from transformers import BloomTokenizerFast
 from petals import DistributedBloomForCausalLM
+import logging
+import sys
+
+logging.basicConfig(level=logging.INFO, stream=sys.stdout, format='')
 
 MODEL_NAME = "bigscience/bloom-petals"
 tokenizer = BloomTokenizerFast.from_pretrained(MODEL_NAME)
@@ -261,7 +277,7 @@ env = TextRLEnv(model, tokenizer, observation_input=observaton_list, max_length=
 actor = TextRLActor(env, model, tokenizer,
                     act_deterministically=False,
                     temperature=1.0,
-                    top_k=10,
+                    top_k=0,
                     top_p=1.0,
                     repetition_penalty=2)
 agent = actor.agent_ppo(update_interval=2, minibatch_size=2, epochs=10)
