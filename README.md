@@ -125,7 +125,7 @@ example: [google/flan-t5-base](https://colab.research.google.com/drive/1DYHt0mi6
 ```python
 import pfrl
 from textrl import TextRLEnv, TextRLActor, train_agent_with_evaluation
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 import logging
 import sys
 
