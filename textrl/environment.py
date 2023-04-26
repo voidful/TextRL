@@ -64,7 +64,7 @@ class TextRLEnv(gym.Env):
             obs_list = []
             for p_text in predicted:
                 p_text_str = self.tokenizer.convert_tokens_to_string(p_text)
-                if model.__class__.__name__ == 'OPTForCausalLM':
+                if self.model.__class__.__name__ == 'OPTForCausalLM':
                     feature_dict = self.tokenizer([[self.gat_obs_input(self.input_item), p_text_str]],
                                                   return_tensors='pt',
                                                   add_special_tokens=False).to(self.model.device)
