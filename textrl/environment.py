@@ -1,8 +1,7 @@
+import gym
 import logging
 import random
 import sys
-
-import gym
 import torch
 from torch import autocast
 
@@ -65,37 +64,45 @@ class TextRLEnv(gym.Env):
             obs_list = []
             for p_text in predicted:
                 p_text_str = self.tokenizer.convert_tokens_to_string(p_text)
-                if len([k for k, v in self.model.named_parameters() if 'decoder' in k]) > 0:
-                    feature_dict = self.tokenizer([self.gat_obs_input(self.input_item)],
+                if model.__class__.__name__ == 'OPTForCausalLM':
+                    feature_dict = self.tokenizer([[self.gat_obs_input(self.input_item), p_text_str]],
                                                   return_tensors='pt',
-                                                  add_special_tokens=True).to(self.model.device)
-                    if len(p_text) > 0:
-                        decoder_input_ids = [self.model.config.decoder_start_token_id] + \
-                                            self.tokenizer.convert_tokens_to_ids(p_text)
-                        dec_input = torch.tensor([decoder_input_ids]).to(self.model.device)
-                        feature_dict['decoder_input_ids'] = dec_input
-                    else:
-                        feature_dict['decoder_input_ids'] = torch.tensor(
-                            [[self.model.config.decoder_start_token_id]]).to(self.model.device)
+                                                  add_special_tokens=False).to(self.model.device)
                     with torch.cuda.amp.autocast(enabled=False):
                         prediction = self.model(**feature_dict, output_hidden_states=True)
-                    outputs = prediction.decoder_hidden_states[-self.unfreeze_layer_from_past].squeeze(0)
+                    outputs = prediction.hidden_states[-self.unfreeze_layer_from_past][:, -1, :]
                 else:
-                    if self.model.__class__.__name__ == 'DistributedBloomForCausalLM':
-                        with self.model.inference_session(max_length=self.env_max_length) as sess:
+                    if len([k for k, v in self.model.named_parameters() if 'decoder' in k]) > 0:
+                        feature_dict = self.tokenizer([self.gat_obs_input(self.input_item)],
+                                                      return_tensors='pt',
+                                                      add_special_tokens=True).to(self.model.device)
+                        if len(p_text) > 0:
+                            decoder_input_ids = [self.model.config.decoder_start_token_id] + \
+                                                self.tokenizer.convert_tokens_to_ids(p_text)
+                            dec_input = torch.tensor([decoder_input_ids]).to(self.model.device)
+                            feature_dict['decoder_input_ids'] = dec_input
+                        else:
+                            feature_dict['decoder_input_ids'] = torch.tensor(
+                                [[self.model.config.decoder_start_token_id]]).to(self.model.device)
+                        with torch.cuda.amp.autocast(enabled=False):
+                            prediction = self.model(**feature_dict, output_hidden_states=True)
+                        outputs = prediction.decoder_hidden_states[-self.unfreeze_layer_from_past].squeeze(0)
+                    else:
+                        if self.model.__class__.__name__ == 'DistributedBloomForCausalLM':
+                            with self.model.inference_session(max_length=self.env_max_length) as sess:
+                                feature_dict = self.tokenizer([[self.gat_obs_input(self.input_item), p_text_str]],
+                                                              return_tensors='pt',
+                                                              add_special_tokens=False).to(self.model.device)
+                                embs = self.model.transformer.word_embeddings(feature_dict.input_ids)
+                                embs = self.model.transformer.word_embeddings_layernorm(embs)
+                                h = sess.step(embs)
+                                outputs = self.model.transformer.ln_f(h[:, -1])
+                        else:
                             feature_dict = self.tokenizer([[self.gat_obs_input(self.input_item), p_text_str]],
                                                           return_tensors='pt',
                                                           add_special_tokens=False).to(self.model.device)
-                            embs = self.model.transformer.word_embeddings(feature_dict.input_ids)
-                            embs = self.model.transformer.word_embeddings_layernorm(embs)
-                            h = sess.step(embs)
-                            outputs = self.model.transformer.ln_f(h[:, -1])
-                    else:
-                        feature_dict = self.tokenizer([[self.gat_obs_input(self.input_item), p_text_str]],
-                                                      return_tensors='pt',
-                                                      add_special_tokens=False).to(self.model.device)
-                        prediction = self.model(**feature_dict, output_hidden_states=True)
-                        outputs = prediction.hidden_states[-self.unfreeze_layer_from_past].squeeze(0)
+                            prediction = self.model(**feature_dict, output_hidden_states=True)
+                            outputs = prediction.hidden_states[-self.unfreeze_layer_from_past].squeeze(0)
                 obs_list.append(outputs.data[-1])
             return (torch.stack(obs_list))
 

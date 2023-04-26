@@ -42,7 +42,10 @@ class TextRLActor:
         self.gpu_id = gpu_id
         self.device = torch.device("cuda:{}".format(gpu_id))
         self.model = model
-        self.obs_size = model.config.hidden_size
+        if hasattr(model.config, 'word_embed_proj_dim'):
+            self.obs_size = model.config.word_embed_proj_dim
+        else:
+            self.obs_size = model.config.hidden_size
         self.converter = self.model.lm_head
         self.act_deterministically = act_deterministically
         self.temperature = temperature
