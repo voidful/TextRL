@@ -20,7 +20,7 @@ def main(arg=None):
     model = AutoModelWithLMHead.from_pretrained(arg.get('model'))
     tokenizer = AutoTokenizer.from_pretrained(arg.get('model'))
 
-    env = TextRLEnv(model, tokenizer, observation_input=["dummy"])
+    env = TextRLEnv(model, tokenizer, observation_input=[{'input':'dummy'}])
     actor = TextRLActor(env, model, tokenizer)
     agent = actor.agent_ppo()
     agent.load(arg.get('rl'))
