@@ -94,6 +94,7 @@ class TextRLEnv(gym.Env):
                             with self.model.inference_session(max_length=self.env_max_length) as sess:
                                 feature_dict = self.tokenizer([[self.gat_obs_input(self.input_item), p_text_str]],
                                                               return_tensors='pt',
+                                                              return_token_type_ids=False,
                                                               add_special_tokens=False).to(self.model.device)
                                 embs = self.model.transformer.word_embeddings(feature_dict.input_ids)
                                 embs = self.model.transformer.word_embeddings_layernorm(embs)
@@ -102,6 +103,7 @@ class TextRLEnv(gym.Env):
                         else:
                             feature_dict = self.tokenizer([[self.gat_obs_input(self.input_item), p_text_str]],
                                                           return_tensors='pt',
+                                                          return_token_type_ids=False,
                                                           add_special_tokens=False).to(self.model.device)
                             prediction = self.model(**feature_dict, output_hidden_states=True)
                             outputs = prediction.hidden_states[-self.unfreeze_layer_from_past].squeeze(0)
