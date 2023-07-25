@@ -67,6 +67,7 @@ class TextRLEnv(gym.Env):
                 if self.model.__class__.__name__ == 'OPTForCausalLM':
                     feature_dict = self.tokenizer([[self.gat_obs_input(self.input_item), p_text_str]],
                                                   return_tensors='pt',
+                                                  return_token_type_ids=False,
                                                   add_special_tokens=False).to(self.model.device)
                     with torch.cuda.amp.autocast(enabled=False):
                         prediction = self.model(**feature_dict, output_hidden_states=True)
@@ -75,6 +76,7 @@ class TextRLEnv(gym.Env):
                     if len([k for k, v in self.model.named_parameters() if 'decoder' in k]) > 0:
                         feature_dict = self.tokenizer([self.gat_obs_input(self.input_item)],
                                                       return_tensors='pt',
+                                                      return_token_type_ids=False,
                                                       add_special_tokens=True).to(self.model.device)
                         if len(p_text) > 0:
                             decoder_input_ids = [self.model.config.decoder_start_token_id] + \
