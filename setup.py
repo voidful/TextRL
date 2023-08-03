@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='textrl',
-    version='0.2.20',
+    version='0.2.21',
     description='TextRL - use reinforcement learning to adjust text generation results.',
     url='https://github.com/voidful/TextRL',
     author='Voidful',

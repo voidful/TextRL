@@ -111,6 +111,7 @@ class TextRLActor:
             entropy_coef=0,
             gamma=0.95,  # https://arxiv.org/abs/2210.01241
             lambd=1,
+            max_grad_norm=1.0,
             standardize_advantages=True,
             act_deterministically=self.act_deterministically
         )
@@ -296,7 +297,7 @@ class TextPPO(pfrl.agents.PPO):
         loss_policy = -torch.mean(
             torch.min(
                 (prob_ratio * advs),
-                (torch.clamp(prob_ratio, 1 - self.clip_eps, 1 + self.clip_eps) * advs),
+                torch.clamp(prob_ratio, 1 - self.clip_eps, 1 + self.clip_eps) * advs,
             ),
         )
         if self.clip_eps_vf is None:
