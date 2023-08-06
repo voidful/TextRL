@@ -213,8 +213,7 @@ actor = TextRLActor(env, model, tokenizer,
                     act_deterministically=False,
                     temperature=1.0,
                     top_k=0,
-                    top_p=1.0,
-                    repetition_penalty=2)
+                    top_p=1.0)
 agent = actor.agent_ppo(update_interval=2, minibatch_size=2, epochs=10)
 print(actor.predict(observaton_list[0]))
 
@@ -278,8 +277,7 @@ actor = TextRLActor(env, model, tokenizer,
                     act_deterministically=False,
                     temperature=1.0,
                     top_k=0,
-                    top_p=1.0,
-                    repetition_penalty=2)
+                    top_p=1.0)
 agent = actor.agent_ppo(update_interval=2, minibatch_size=2, epochs=10)
 
 print(actor.predict(observaton_list[0]))
@@ -470,8 +468,7 @@ actor = TextRLActor(env, model, tokenizer,
                     temperature=1,                # temperature for sampling
                     compare_sample=2,             # num of sample to rank
                     top_k=0,                      # top k sampling
-                    top_p=1.0,                    # top p sampling
-                    repetition_penalty=2)         # repetition penalty from CTRL paper (https://arxiv.org/abs/1909.05858)
+                    top_p=1.0,)                    # top p sampling
 ```
 
 When training a reinforcement learning (RL) model, several key parameters need to be tuned to ensure optimal performance. Here is a list of important parameters and their descriptions:

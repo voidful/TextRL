@@ -34,8 +34,7 @@ class TextRLActor:
                  act_deterministically=True,
                  temperature=1.0,
                  top_k=0,
-                 top_p=1.0,
-                 repetition_penalty=1.0):
+                 top_p=1.0):
         self.agent = None
         self.n_actions = max(model.config.vocab_size, tokenizer.vocab_size)
         self.env = env
@@ -52,7 +51,6 @@ class TextRLActor:
         self.top_k = top_k
         self.top_p = top_p
         self.optimizer = optimizer
-        self.repetition_penalty = repetition_penalty
         self.unfreeze_layer_from_past = unfreeze_layer_from_past
 
         parents = [parent[0] for parent in model.named_children()]
@@ -83,8 +81,7 @@ class TextRLActor:
             SoftmaxCategoricalHead(self.env,
                                    temperature=self.temperature,
                                    top_k=self.top_k,
-                                   top_p=self.top_p,
-                                   repetition_penalty=self.repetition_penalty)
+                                   top_p=self.top_p)
         )
         vf = torch.nn.Sequential(
             torch.nn.Linear(self.obs_size, self.obs_size // 2),
@@ -183,27 +180,15 @@ def top_k_top_p_filtering(
 
 
 class SoftmaxCategoricalHead(torch.nn.Module):
-    def __init__(self, env, temperature=1.0, top_k=0, top_p=1.0, repetition_penalty=1.0):
+    def __init__(self, env, temperature=1.0, top_k=0, top_p=1.0):
         super().__init__()
         self.env = env
         self.softmax = torch.nn.Softmax(dim=-1)
         self.temperature = temperature
         self.top_k = top_k
         self.top_p = top_p
-        self.repetition_penalty = repetition_penalty
 
     def forward(self, logits):
-        # repetition penalty from CTRL paper (https://arxiv.org/abs/1909.05858)
-        # repetition penalty from https://github.com/huggingface/transformers/pull/2303/files#diff-6b72b98c4c2dcfc6cc606843917733f5d858374fbc22a735ff483bbc0c1e63ea
-        if self.repetition_penalty != 1.0:
-            for seq_num, predicted in enumerate(self.env.predicted):
-                for previous_tokens in set(predicted):
-                    prev_token_id = self.env.tokenizer.convert_tokens_to_ids(previous_tokens)
-                    # if score < 0 then repetition penalty has to multiplied to reduce the previous token probability
-                    if torch.all(logits[:, seq_num, prev_token_id] < 0):
-                        logits[:, seq_num, prev_token_id] *= self.repetition_penalty
-                    else:
-                        logits[:, seq_num, prev_token_id] /= self.repetition_penalty
         logits = logits / self.temperature
         logits = top_k_top_p_filtering(logits, top_k=self.top_k, top_p=self.top_p)
         return torch.distributions.Categorical(logits=logits)
