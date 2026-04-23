@@ -13,6 +13,37 @@ TextRL is a thin, opinionated layer on top of [HuggingFace TRL](https://github.c
 
 > **v1.0 breaking change.** The legacy PFRL/gym API (`TextRLEnv`, `TextRLActor`, `train_agent_with_evaluation`) is gone. See [docs/migration.md](docs/migration.md).
 
+## Why TextRL vs. raw TRL?
+
+TextRL is a *thin wrapper*, not a replacement. Use it when the ergonomics are worth more than the indirection; drop down to raw TRL when they aren't.
+
+**What TextRL adds on top of TRL**
+
+- **One config, one trainer per family.** Pick an algorithm by string — `algo="ipo"` — and `TextRLConfig` dispatches to the right one of TRL's 15+ config classes. No need to remember that IPO lives inside `DPOTrainer` with `loss_type="ipo"`, or that REINFORCE++ is `RLOOTrainer` with `rloo_k=1`.
+- **`load_model` one-liner.** PEFT + 4/8-bit quantization + reference model + tokenizer padding defaults, handled together.
+- **Reward composition.** `@reward_fn` decorator, `compose(f1, f2, weights=...)` for weighted sums, `ClassifierReward` to wrap any HuggingFace `pipeline` as a reward.
+- **Schema validation up front.** Dataset shape is checked before training starts, not 500 steps in.
+- **YAML-driven CLI.** `textrl-train --config cfg.yaml` — configuration-as-experiment, good for sweeps and reproducibility.
+- **Migration hints for removed algos.** Ask for `ppo` / `orpo` / `simpo` / `cpo` and you get a pointer to the modern replacement instead of a cryptic `ImportError`.
+- **PEFT merge utility.** `textrl-merge` produces a standalone HF checkpoint from a LoRA adapter.
+
+**Honest trade-offs**
+
+- It's a thin layer. Brand-new TRL features land upstream first; TextRL tracks them.
+- Advanced customization means reaching through the `.trl_trainer` escape hatch anyway.
+- Smaller community, less battle-testing than TRL itself.
+
+**When to use TextRL**
+
+- Comparing multiple algorithms with minimal boilerplate changes.
+- YAML-driven experiments, reward composition, or wrapping classifiers as rewards.
+- You want sensible PEFT/QLoRA/ref-model defaults without reading three docs pages.
+
+**When to use raw TRL**
+
+- Single algorithm, heavy customization, or you need a feature that hasn't landed in TextRL yet.
+- You're already fluent in the TRL API and the wrapper would just be indirection.
+
 ## Supported algorithms
 
 | Family | Algorithms | TRL trainer |
