@@ -1,3 +1,0 @@
-pfrl@git+https://github.com/voidful/pfrl.git
-gym
-transformers

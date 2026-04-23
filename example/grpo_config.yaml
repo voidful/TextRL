@@ -1,0 +1,29 @@
+# Minimal YAML config for `textrl-train --config example/grpo_config.yaml`.
+#
+# Usage:
+#   textrl-train --config example/grpo_config.yaml
+#
+# `reward` points at a module:callable reachable on PYTHONPATH.
+# The example below reuses the reward defined in grpo_quickstart.py.
+
+algo: grpo
+output_dir: out/grpo
+learning_rate: 5e-6
+num_generations: 4
+beta: 0.04
+per_device_train_batch_size: 2
+max_steps: 20
+bf16: true
+logging_steps: 1
+
+model:
+  name: Qwen/Qwen2.5-0.5B
+
+dataset:
+  list:
+    - "Write a haiku about rain."
+    - "Explain recursion in one sentence."
+    - "Describe a sunset on Mars."
+    - "Summarize photosynthesis briefly."
+
+reward: example.grpo_quickstart:length_target
