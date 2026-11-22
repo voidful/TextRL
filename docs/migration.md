@@ -87,12 +87,28 @@ trainer.train()
 
 PPO is gone from TRL core; `algo="grpo"` is the closest drop-in. If you need a learned reward model in the loop, train one with `RewardModelTrainer` and pass it to `OnlineTrainer(algo="rloo", reward=rm)`.
 
+### The historical sentiment example
+
+The [0.x sentiment notebook](https://github.com/voidful/TextRL/blob/dc8568e4ce61c4ac07e9d3996257410489f2ec59/example/2022-12-10-textrl-elon-musk.ipynb) uses a dictionary for each example. The historical fix ([#28](https://github.com/voidful/TextRL/pull/28)) reads its prompt with `input_item["input"]`, not `input_item[0]`. The notebook is not part of 1.0. To score both parts of a plain-text example under the 1.0 API, combine the prompt and completion explicitly:
+
+```python
+@reward_fn
+def my_reward(prompts, completions, **columns):
+    return [score(prompt + completion) for prompt, completion in zip(prompts, completions)]
+```
+
+### Legacy FLAN-T5 layer unfreezing
+
+There is no `unfreeze_layer_from_past` setting in 1.0. In the 0.x FLAN-T5 path, setting it to `1` made the environment pass the final decoder hidden state to the policy, which then ran the last decoder block again. The extracted block was called with only a hidden state, rather than with the encoder context and decoder position bias passed by the normal T5 decoder stack. This changes inference even before training. To avoid that path on 0.x, keep the setting at `0` on both the actor and the environment. This does not guarantee nonempty generations.
+
+For a new 1.0 online-RL run, start from a causal-LM model and configure LoRA via `load_model(..., peft={"type": "lora", "r": 16})`. The adapter works through the model's normal forward path; it is not equivalent to unfreezing the last FLAN-T5 block. See the [GRPO quickstart](../README.md#grpo-with-a-callable-reward).
+
 ## Checkpoint dump → merge
 
 **Before:**
 
 ```bash
-textrl-dump --model base_model --rl rl_ckpt --dump merged
+textrl-dump --model base_model --rl rl_ckpt --dumpdir merged
 ```
 
 **After:**
@@ -101,7 +117,13 @@ textrl-dump --model base_model --rl rl_ckpt --dump merged
 textrl-merge --adapter rl_ckpt --output merged
 ```
 
-`textrl-dump` still exists as a deprecated alias; it prints a warning and delegates to `textrl-merge`.
+In 1.0, the deprecated alias uses `--dump` instead of the old `--dumpdir` and delegates to `textrl-merge`. It has the same format requirements as `textrl-merge`: supply a PEFT adapter directory (with `adapter_config.json` and adapter weights). It does not convert old PFRL checkpoints. A full Hugging Face checkpoint can be loaded directly without merging.
+
+### Why legacy `actor.predict` and exported inference differ
+
+In 0.x, `actor.predict` ran the PFRL environment token by token, recalculating observations from the prompt and growing output. The old `dump` script rebuilt a default actor, loaded its checkpoint and saved the base Hugging Face model with the actor's language-model head. It did not export the environment, action selection, or any separately configured decoder layers. A direct `model.generate()` call can therefore be faster without producing the same answers. In particular, the old default dump was not designed to export a policy trained with `unfreeze_layer_from_past > 0`.
+
+To compare a 1.0 PEFT model before and after merging, start with the same base checkpoint, tokenizer, prompt formatting, and numeric precision. Use greedy decoding (`do_sample=False`, `num_beams=1`), then match token limits and stopping tokens. Compare generated token IDs or next-token logits on a few prompts before comparing task scores. Test the adapter-equipped model and the merged model, not the unadapted base model.
 
 ## Things that are new
 
