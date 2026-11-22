@@ -56,7 +56,10 @@ TRL batches rollouts and calls the reward once per batch on finished sequences â
 env = MyEnv(model, tokenizer, observation_list)
 actor = TextRLActor(env, model, tokenizer)
 agent = actor.agent_ppo(update_interval=50, minibatch_size=2000, epochs=20)
-train_agent_with_evaluation(agent, env, steps=1000, ...)
+train_agent_with_evaluation(
+    agent, env, steps=1000, eval_n_steps=None, eval_n_episodes=5,
+    eval_interval=100, outdir="out",
+)
 ```
 
 **After (1.0):**
